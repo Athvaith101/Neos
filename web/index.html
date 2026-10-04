@@ -13,12 +13,16 @@ table.metrics,table.fc{width:100%;border-collapse:collapse;font-size:12.5px}tabl
 .statusGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.statusBox{padding:13px;border:1px solid var(--line);border-radius:12px;background:#fbfefc}.statusBox .label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}.statusBox b{display:block;margin-top:3px;font-size:13px}.foot{margin-top:30px;padding:18px 4px 0;border-top:1px solid var(--line);color:#70847b;font-size:12px}.loading{padding:12px;border:1px solid #f0d39a;background:#fff8e8;color:#7b5b20;border-radius:10px}.monoBlock{background:#10231a;color:#dcefe4;border-radius:12px;padding:13px;overflow:auto;font:11px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace}.evidenceCallout{padding:15px;border-radius:13px;background:#edf8f1;border:1px solid #c9e7d4;margin-bottom:14px}.evidenceCallout strong{color:var(--green2)}
 @media(max-width:1050px){.hero{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(3,1fr)}.arch{grid-template-columns:repeat(3,1fr)}.capgrid,.gridcards{grid-template-columns:repeat(2,1fr)}}@media(max-width:760px){.top-in{padding:12px 16px}.topnav{display:none}.wrap{padding:20px 15px 60px}.heroMain{padding:24px}.hero h1{font-size:42px}.kpis{grid-template-columns:repeat(2,1fr)}.two,.gridcards,.capgrid,.knobs{grid-template-columns:1fr}.arch{grid-template-columns:repeat(2,1fr)}.readout{grid-template-columns:repeat(2,1fr)}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
+.controlLab{background:linear-gradient(180deg,#fff,#f7fcf9)}.knobs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.knob{border:1px solid var(--line);border-radius:12px;padding:13px;background:#fbfefc}.knob label{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);font-weight:650}.knob label b{color:var(--green2);font-size:15px}.knob input{width:100%;margin-top:12px;accent-color:var(--green)}.cfgActions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:15px}.cfgState{font-size:12px;color:var(--muted)}.weatherCards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.weatherCard{border:1px solid var(--line);background:#fff;border-radius:13px;padding:14px;cursor:pointer;transition:.18s}.weatherCard:hover{border-color:#99cdb0;transform:translateY(-1px)}.weatherCard.active{border-color:var(--green);box-shadow:0 0 0 2px #dff2e7;background:#f7fcf9}.weatherCard .wi{font-size:22px}.weatherCard b{display:block;margin-top:7px}.weatherCard span{display:block;color:var(--muted);font-size:11px;margin-top:3px}.runState{border:1px solid #cde7d7;background:#f2faf5;padding:9px 12px;border-radius:10px;font-size:12px;color:var(--green2)}@media(max-width:900px){.knobs{grid-template-columns:repeat(2,1fr)}.weatherCards{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.knobs,.weatherCards{grid-template-columns:1fr}}
 </style></head><body>
-<header class="top"><div class="top-in"><a class="brand" href="#top"><div class="brandmark">N</div><div><strong>NEOS</strong><span>Neighbourhood Energy Operating System</span></div></a><nav class="topnav"><a href="#control">Control</a><a href="#intelligence">AI & Forecasting</a><a href="#evidenceSection">Evidence</a><a href="#architecture">Architecture</a><a href="#kits">Three Kits</a></nav><div class="status"><span class="dot"></span><span id="topStatus">Research backend online</span></div></div></header>
+<header class="top"><div class="top-in"><a class="brand" href="#top"><div class="brandmark">N</div><div><strong>NEOS</strong><span>Neighbourhood Energy Operating System</span></div></a><nav class="topnav"><a href="#control">Control</a><a href="#intelligence">AI & Forecasting</a><a href="#evidenceSection">Evidence</a><a href="#architecture">Architecture</a><a href="#kits">Three Kits</a></nav><div class="status"><span class="dot"></span><span id="topStatus">Connecting to NEOS backend…</span></div></div></header>
 <div class="wrap" id="top">
-<section class="hero"><div class="heroMain"><div class="eyebrow">● Final Candidate 1.0 · Research Prototype</div><h1>Make the neighbourhood flexible — without making people change their lives.</h1><p>NEOS coordinates EVs, rooftop solar, batteries and flexible loads around a distribution transformer. Forecast uncertainty is carried into optimisation, every proposed action is projected through a safety layer, and the final action is verified against an unbalanced AC digital twin.</p><div class="heroActions"><a class="btn primary" href="#control">Open live control room →</a><a class="btn" href="#evidenceSection">Explore evidence</a><a class="btn" href="#architecture">See how NEOS works</a></div></div><div class="heroSide"><h3>Live platform status</h3><div class="big" id="heroBackend">ONLINE</div><div class="small">FastAPI · OpenDSS · simulation / research boundary</div><div class="mini"><div><b id="heroHomes">300</b><span>homes</span></div><div><b id="heroTx">630</b><span>kVA transformer</span></div><div><b id="heroEV">60</b><span>EVs</span></div><div><b id="heroPV">781</b><span>kWp rooftop PV</span></div></div></div></section>
+<section class="hero"><div class="heroMain"><div class="eyebrow">● NEOS · Neighbourhood Energy Operating System</div><h1>Make the neighbourhood flexible — without making people change their lives.</h1><p>NEOS coordinates EVs, rooftop solar, batteries and flexible loads around a distribution transformer. Forecast uncertainty is carried into optimisation, every proposed action is projected through a safety layer, and the final action is verified against an unbalanced AC digital twin.</p><div class="heroActions"><a class="btn primary" href="#control">Open live control room →</a><a class="btn" href="#evidenceSection">Explore evidence</a><a class="btn" href="#architecture">See how NEOS works</a></div></div><div class="heroSide"><h3>Live platform status</h3><div class="big" id="heroBackend">ONLINE</div><div class="small">FastAPI · OpenDSS · digital energy operating system</div><div class="mini"><div><b id="heroHomes">300</b><span>homes</span></div><div><b id="heroTx">630</b><span>kVA transformer</span></div><div><b id="heroEV">60</b><span>EVs</span></div><div><b id="heroPV">781</b><span>kWp rooftop PV</span></div></div></div></section>
 <div class="kpis"><div class="kpi green"><div class="v" id="kHomes">300</div><div class="l">Homes</div></div><div class="kpi"><div class="v" id="kEV">60</div><div class="l">Electric vehicles</div></div><div class="kpi"><div class="v" id="kBatt">26</div><div class="l">Home batteries</div></div><div class="kpi"><div class="v" id="kComm">10</div><div class="l">Commercial sites</div></div><div class="kpi"><div class="v" id="kNodes">40</div><div class="l">Network nodes</div></div><div class="kpi green"><div class="v" id="kHead">535</div><div class="l">kW import headroom</div></div></div>
 <div class="sectionLabel" id="control">CONTROL ROOM</div><div class="rail" id="rail" role="group" aria-label="Scenario"></div>
+<section class="panel controlLab" id="configuration"><div class="ptitle"><h2>Neighbourhood configuration</h2><span>change the digital neighbourhood and rebuild</span></div><p class="note">Adjust the resources and transformer size, then apply the configuration. NEOS rebuilds the simulated feeder and refreshes its forecast benchmark.</p><div id="knobs" class="knobs"></div><div class="cfgActions"><button class="btn primary" id="applyCfg">Apply configuration</button><span id="cfgState" class="cfgState">Using the default NEOS neighbourhood</span></div></section>
+<section class="panel weatherLab"><div class="ptitle"><h2>Weather & stress laboratory</h2><span>select the operating condition</span></div><p class="note">These are the implemented NEOS scenario conditions. Weather-driven cases include normal, cloud, heat and renewable-shortage conditions; the remaining cases stress EV demand, storage and network demand.</p><div id="weatherCards" class="weatherCards"></div></section>
 <section class="panel" id="livePanel"><div class="ptitle"><h2>Live 96-step control loop</h2><span id="liveClock">idle</span></div><p class="note">One simulated step every 15 minutes. NEOS forecasts, optimises, applies the safety projection, and checks the resulting network state. The live stream is computed by the deployed backend.</p><div class="switchbar"><button class="chip" id="runCo">Run coordinated</button><button class="chip" id="runUn">Run without coordination</button><button class="chip" id="runStop" disabled>Stop</button><span class="legend"><span id="liveMode"></span></span></div><div id="liveReadout" class="readout"></div><div id="liveChart"></div></section>
 <section class="panel"><div class="ptitle"><h2>Scenario performance</h2><span>select a scenario above</span></div><div class="ptitle"><h2 id="scTitle"></h2><span id="scDesc"></span></div><div class="legend"><span style="color:var(--bad)"><i></i>No coordination</span><span style="color:var(--green)"><i></i>NEOS coordinated</span><span style="color:var(--muted)"><i class="dash"></i>Transformer rating</span></div><div id="heroChart"></div></section>
 <div class="two"><section class="panel"><div class="ptitle"><h2>What NEOS did</h2><span>controller explanation</span></div><div id="verdict"></div></section><section class="panel"><div class="ptitle"><h2>Measured outcome</h2><span>24-hour simulated window</span></div><div class="scroll"><table class="metrics" id="metrics"></table></div></section></div>
@@ -33,12 +37,12 @@ table.metrics,table.fc{width:100%;border-collapse:collapse;font-size:12.5px}tabl
 <section class="panel"><div class="ptitle"><h2>Evidence, not a single run</h2><span>paired · multi-seed · held-out</span></div><div class="evidenceCallout"><strong>Evidence boundary:</strong> quantitative performance claims remain anchored to the OpenDSS-generated research evidence. Broader operating-system modules are clearly labelled as implemented software, simulation modules, concepts or roadmap items.</div><div id="evidence"></div></section>
 <section class="panel"><div class="ptitle"><h2>What the system does — and does not — claim</h2><span>research integrity</span></div><div class="gridcards"><div class="infoCard"><span class="tag">Verified core</span><h3>Urban / suburban feeder</h3><p>Strongest quantitatively validated part of NEOS: OpenDSS-verified feeder simulations covering evening transformer overload, EV surge and PV variability.</p></div><div class="infoCard"><span class="tag partial">Simulation module</span><h3>Low-income / peri-urban</h3><p>Community Energy Hub, shared battery, essential-service prioritisation, outage/resilience and affordability/service concepts. Evidence is not yet equivalent to the urban benchmark.</p></div><div class="infoCard"><span class="tag partial">Simulation module</span><h3>Rural</h3><p>Shared solar, battery, pumps, water, thermal/cold storage, productive loads, public lighting, priority tiers and surplus routing. Benchmark validation is pending.</p></div><div class="infoCard"><span class="tag concept">Concept only</span><h3>Islanding</h3><p>Simulation/concept state machine only. This is not a certified protection design or public-feeder islanding claim.</p></div><div class="infoCard"><span class="tag concept">Not implemented</span><h3>Hardware control</h3><p>No physical actuator control, hardware-in-the-loop, real-feeder deployment or DISCOM approval is claimed.</p></div><div class="infoCard"><span class="tag">Safety boundary</span><h3>Flexibility is not a guarantee</h3><p>The flexibility envelope represents estimated available flexibility, not a contractual delivery guarantee.</p></div></div></section>
 <div class="sectionLabel" id="kits">THREE-KIT OPERATING SYSTEM</div>
-<section class="panel"><div class="ptitle"><h2>NEOS adapts to neighbourhood context</h2><span>one operating architecture · different resource mixes</span></div><div class="gridcards"><div class="infoCard"><span class="tag">Kit 1 · Implemented</span><h3>Urban / Suburban</h3><p><b>Focus:</b> EV, PV, home batteries and flexible loads.<br><b>Resources:</b> rooftop PV, EV charging, home batteries, flexible heating/loads and community battery abstraction.<br><b>Primary evidence:</b> OpenDSS-verified urban feeder results.</p></div><div class="infoCard"><span class="tag partial">Kit 2 · Partial</span><h3>Low-income / Peri-urban</h3><p><b>Focus:</b> community energy hub and essential-service resilience.<br><b>Resources:</b> shared battery, priority loads, outage logic, load-limited island concept, offline participation and affordability/service concepts.</p></div><div class="infoCard"><span class="tag partial">Kit 3 · Partial</span><h3>Rural</h3><p><b>Focus:</b> shared solar, battery, pumps, water and thermal/cold storage.<br><b>Resources:</b> productive loads, public lighting, priority tiers, rural scheduling and surplus routing.</p></div></div></section>
+<section class="panel"><div class="ptitle"><h2>NEOS adapts to neighbourhood context</h2><span>one operating architecture · different resource mixes</span></div><div class="gridcards"><div class="infoCard"><span class="tag">Kit 1 · Implemented</span><h3>Urban / Suburban</h3><p><b>Focus:</b> EV, PV, home batteries and flexible loads.<br><b>Resources:</b> rooftop PV, EV charging, home batteries, flexible heating/loads and community battery abstraction.<br><b>Primary evidence:</b> OpenDSS-verified urban feeder results.</p></div><div class="infoCard"><span class="tag partial">Kit 2 · Partial</span><h3>Semi-urban / Peri-urban</h3><p><b>Focus:</b> community energy hub and essential-service resilience.<br><b>Resources:</b> shared battery, priority loads, outage logic, load-limited island concept, offline participation and affordability/service concepts.</p></div><div class="infoCard"><span class="tag partial">Kit 3 · Partial</span><h3>Rural</h3><p><b>Focus:</b> shared solar, battery, pumps, water and thermal/cold storage.<br><b>Resources:</b> productive loads, public lighting, priority tiers, rural scheduling and surplus routing.</p></div></div></section>
 <section class="panel" id="platformPanel"><div class="ptitle"><h2>Platform capability map</h2><span>live manifest from the deployed backend</span></div><div id="platformCaps" class="capgrid"></div></section>
-<section class="panel"><div class="ptitle"><h2>Operating-system modules</h2><span>supporting layers in Final Candidate 1.0</span></div><div class="gridcards"><div class="infoCard"><h3>Resources & telemetry</h3><p>Batteries · EVs · pumps · tanks · thermal/cold storage · telemetry · phase-aware monitoring.</p></div><div class="infoCard"><h3>Resilience</h3><p>Reserve · offline continuity · outage support · community energy hub · load prioritisation.</p></div><div class="infoCard"><h3>Grid interface</h3><p>DISCOM request layer · flexibility interface · verification ledger · provenance and claims management.</p></div><div class="infoCard"><h3>Rural scheduling</h3><p>Priority tiers, pumps, water storage, productive loads, public lighting and surplus routing.</p></div><div class="infoCard"><h3>Evidence layer</h3><p>Evidence tags, source hashes, seeds, configuration, software version and research boundary.</p></div><div class="infoCard"><h3>Future roadmap</h3><p>Stress-test laboratory, communications-loss testing, forecast-failure robustness, battery derating, adaptive reserve study and broader web exposure remain roadmap work.</p></div></div></section>
+<section class="panel"><div class="ptitle"><h2>Operating-system modules</h2><span>supporting NEOS operating layers</span></div><div class="gridcards"><div class="infoCard"><h3>Resources & telemetry</h3><p>Batteries · EVs · pumps · tanks · thermal/cold storage · telemetry · phase-aware monitoring.</p></div><div class="infoCard"><h3>Resilience</h3><p>Reserve · offline continuity · outage support · community energy hub · load prioritisation.</p></div><div class="infoCard"><h3>Grid interface</h3><p>DISCOM request layer · flexibility interface · verification ledger · provenance and claims management.</p></div><div class="infoCard"><h3>Rural scheduling</h3><p>Priority tiers, pumps, water storage, productive loads, public lighting and surplus routing.</p></div><div class="infoCard"><h3>Evidence layer</h3><p>Evidence tags, source hashes, seeds, configuration, software version and research boundary.</p></div><div class="infoCard"><h3>Future roadmap</h3><p>Stress-test laboratory, communications-loss testing, forecast-failure robustness, battery derating, adaptive reserve study and broader web exposure remain roadmap work.</p></div></div></section>
 <div class="sectionLabel" id="architecture">SYSTEM ARCHITECTURE</div>
-<section class="panel"><div class="ptitle"><h2>NEOS control architecture</h2><span>Forecast → Optimise → Physics-Verify → Dispatch → Measure → Explain</span></div><div class="arch"><div><strong>Forecast</strong><span>Demand + solar distributions, P10/P50/P90, uncertainty.</span></div><div><strong>Optimise</strong><span>MPC / LP / MILP schedules flexible resources.</span></div><div><strong>Safety</strong><span>Projection, reserve, voltage, line and transformer constraints.</span></div><div><strong>OpenDSS</strong><span>Unbalanced AC digital twin verifies proposed actions.</span></div><div><strong>Dispatch</strong><span>Simulation-only resource setpoints within accepted limits.</span></div><div><strong>Explain</strong><span>Decision trace, evidence tags and human-readable rationale.</span></div></div><div class="architectureNote">The deployed boundary is <b>simulation / research prototype</b>. There is no physical actuator control. The backend exposes REST/JSON and server-sent event simulation endpoints through FastAPI.</div></section>
-<section class="panel"><div class="ptitle"><h2>Deployment & reproducibility</h2><span>live environment</span></div><div class="statusGrid"><div class="statusBox"><div class="label">Backend</div><b id="deployBackend">Render · FastAPI</b></div><div class="statusBox"><div class="label">Grid engine</div><b id="deployGrid">OpenDSSDirect 0.9.4</b></div><div class="statusBox"><div class="label">Version</div><b>Final Candidate 1.0-research</b></div><div class="statusBox"><div class="label">Frontend</div><b>Static web · Vercel-ready</b></div></div><p class="note" style="margin-top:14px">The service reports its runtime provenance through the health endpoint, including Python, NumPy, SciPy, scikit-learn, OpenDSSDirect and source SHA-256 information.</p><div class="monoBlock">NEOS pipeline: Sense → Forecast → Flexibility Envelope → Optimise → Safety Projection → OpenDSS Verification → Decision Trace → Measure → Explain</div></section>
+<section class="panel"><div class="ptitle"><h2>NEOS control architecture</h2><span>Forecast → Optimise → Physics-Verify → Dispatch → Measure → Explain</span></div><div class="arch"><div><strong>Forecast</strong><span>Demand + solar distributions, P10/P50/P90, uncertainty.</span></div><div><strong>Optimise</strong><span>MPC / LP / MILP schedules flexible resources.</span></div><div><strong>Safety</strong><span>Projection, reserve, voltage, line and transformer constraints.</span></div><div><strong>OpenDSS</strong><span>Unbalanced AC digital twin verifies proposed actions.</span></div><div><strong>Dispatch</strong><span>Simulation-only resource setpoints within accepted limits.</span></div><div><strong>Explain</strong><span>Decision trace, evidence tags and human-readable rationale.</span></div></div><div class="architectureNote">The deployed boundary is <b>simulation boundary · no physical actuator control</b>. There is no physical actuator control. The backend exposes REST/JSON and server-sent event simulation endpoints through FastAPI.</div></section>
+<section class="panel"><div class="ptitle"><h2>Deployment & reproducibility</h2><span>live environment</span></div><div class="statusGrid"><div class="statusBox"><div class="label">Backend</div><b id="deployBackend">Render · FastAPI</b></div><div class="statusBox"><div class="label">Grid engine</div><b id="deployGrid">OpenDSSDirect 0.9.4</b></div><div class="statusBox"><div class="label">Version</div><b>NEOS 1.0</b></div><div class="statusBox"><div class="label">Frontend</div><b>Static web · Vercel-ready</b></div></div><p class="note" style="margin-top:14px">The service reports its runtime provenance through the health endpoint, including Python, NumPy, SciPy, scikit-learn, OpenDSSDirect and source SHA-256 information.</p><div class="monoBlock">NEOS pipeline: Sense → Forecast → Flexibility Envelope → Optimise → Safety Projection → OpenDSS Verification → Decision Trace → Measure → Explain</div></section>
 <section class="panel"><div class="ptitle"><h2>How a decision is made</h2><span>control loop</span></div><div id="pipe"></div></section>
 <p class="foot" id="foot"></p></div>
 <script>
@@ -372,23 +376,31 @@ async function renderPlatformStatus(){
       const cls=(String(v).includes("simulation")||String(v).includes("stage1"))?"partial":(String(v).includes("not_implemented")?"no":"");
       return `<div class="cap ${cls}"><b>${k.replaceAll("_"," ")}</b><span>${v}</span></div>`;
     }).join("");
-    $("#topStatus").textContent="Research backend online · OpenDSS verified";
-  }catch(e){$("#topStatus").textContent="Backend unavailable";}
+    $("#topStatus").textContent="NEOS backend online · OpenDSS verified";
+  }catch(e){$("#topStatus").textContent="NEOS backend unavailable";}
 }
 
 async function boot(){
-  D.meta = await j("/api/meta?"+qs());
-  renderPlate();
-  renderPlatformStatus();
-  const cat = await j("/api/scenarios");
-  cat.forEach(s => D.scenarios[s.key] = {title:(SCENARIO_ICON[s.key]||"")+" "+s.title, desc:s.description});
-  renderRail(); renderKnobs();
-  const b = await j("/api/forecast/benchmark?"+qs());
-  D.forecast_benchmark = b.models; D.pv_calibration = b.pv_ensemble;
-  renderForecastTable(); drawPipe();
-  try{ const E = await j("/api/evidence"); Object.assign(D,{study:E.study,held_out:E.held_out,calibration:E.calibration,override_study:E.override_study,limitations:E.limitations,provenance:E.provenance}); D.meta.replicates=E.meta.replicates; }catch(e){}
-  D.meta.grid_backend = D.meta.grid_backend||"reference"; renderEvidence();
-  await select(Object.keys(D.scenarios)[0], true);
+  try{
+    D.meta=await j("/api/meta?"+qs()); renderPlate(); renderPlatformStatus();
+  }catch(e){
+    $("#topStatus").textContent="NEOS backend unavailable";
+    $("#heroBackend").textContent="OFFLINE";
+    $("#liveClock").textContent=friendlyError(e);
+    $("#cfgState").textContent="Connect the deployed NEOS backend, then refresh.";
+    return;
+  }
+  try{
+    const cat=await j("/api/scenarios");
+    cat.forEach(s=>D.scenarios[s.key]={title:(SCENARIO_ICON[s.key]||"•")+" "+s.title,desc:s.description});
+    renderRail(); renderKnobs(); renderWeatherCards();
+  }catch(e){$("#topStatus").textContent="NEOS online · scenarios unavailable"; return;}
+  // Heavy research panels load independently so one slow endpoint never blanks the whole console.
+  try{const b=await j("/api/forecast/benchmark?"+qs()); D.forecast_benchmark=b.models; D.pv_calibration=b.pv_ensemble; renderForecastTable();}catch(e){$("#fcTable").innerHTML=`<tr><td>Forecast benchmark is taking longer than the dashboard startup window.</td></tr>`;}
+  drawPipe();
+  try{const E=await j("/api/evidence"); Object.assign(D,{study:E.study,held_out:E.held_out,calibration:E.calibration,override_study:E.override_study,limitations:E.limitations,provenance:E.provenance}); if(E.meta&&E.meta.replicates) D.meta.replicates=E.meta.replicates;}catch(e){}
+  D.meta.grid_backend=D.meta.grid_backend||"reference"; renderEvidence();
+  try{await select(Object.keys(D.scenarios)[0],true);}catch(e){$("#scTitle").textContent="Scenario data unavailable"; $("#scDesc").textContent=friendlyError(e);}
 }
 
 async function ensure(k){
@@ -419,7 +431,7 @@ async function select(k, animate=true){
   $("#scTitle").textContent=sc.title.replace(/^\S+\s/,"");
   $("#scDesc").textContent=sc.desc;
   drawHero(sc,animate); drawFlex(sc); drawVolt(sc); drawForecast(sc);
-  renderMetrics(sc); renderVerdict(sc);
+  renderMetrics(sc); renderVerdict(sc); renderWeatherCards();
 }
 
 /* ---------- live stream ---------- */
@@ -427,19 +439,27 @@ let es=null, live=[];
 function liveStop(){ if(es){es.close(); es=null;} $("#runStop").disabled=true;
   $("#runCo").disabled=false; $("#runUn").disabled=false; }
 
+function friendlyError(e){
+  const m=String(e&&e.message||e||"Unknown error");
+  if(/failed to fetch|networkerror|load failed/i.test(m)) return "NEOS backend could not be reached. Check Render status/CORS and refresh.";
+  return m;
+}
 function liveStart(mode){
-  liveStop(); live=[]; $("#liveMode").textContent = mode==="coordinated"
-    ? "optimiser active, safety layer armed" : "no coordination, autonomous inverter protection only";
+  liveStop(); live=[];
+  $("#liveMode").innerHTML=`<span class="runState">${mode==="coordinated"?"NEOS optimiser active · safety layer armed":"No coordination · local protection only"}</span>`;
+  $("#liveClock").textContent="connecting to NEOS…";
   $("#runStop").disabled=false; $("#runCo").disabled=true; $("#runUn").disabled=true;
-  es = new EventSource(API+"/api/stream?scenario="+current+"&mode="+mode+"&"+qs());
-  es.onmessage = ev => {
-    const d = JSON.parse(ev.data);
-    if(d.error){ $("#liveClock").textContent = "failed: "+d.error; liveStop(); return; }
-    if(d.done){ $("#liveClock").textContent = "run complete — peak "+d.metrics.peak_tx_loading.toFixed(1)+" %";
-      liveStop(); return; }
-    live.push(d); drawLive(d);
+  const url=API+"/api/stream?scenario="+encodeURIComponent(current)+"&mode="+encodeURIComponent(mode)+"&"+qs();
+  es=new EventSource(url);
+  es.onopen=()=>$("#liveClock").textContent="simulation running · waiting for first verified step…";
+  es.onmessage=ev=>{
+    try{const d=JSON.parse(ev.data);
+      if(d.error){$("#liveClock").textContent="run failed: "+d.error; liveStop(); return;}
+      if(d.done){$("#liveClock").textContent="run complete · peak "+Number(d.metrics.peak_tx_loading).toFixed(1)+" %"; liveStop(); return;}
+      live.push(d); drawLive(d);
+    }catch(err){console.warn("Invalid NEOS stream event",err);}
   };
-  es.onerror = () => { $("#liveClock").textContent="connection lost"; liveStop(); };
+  es.onerror=()=>{ if(live.length){$("#liveClock").textContent="stream interrupted after step "+live.length+" · backend may still be completing the simulation";} else $("#liveClock").textContent="connection failed · "+friendlyError(new Error("Failed to fetch")); liveStop(); };
 }
 
 function drawLive(d){
@@ -471,37 +491,40 @@ function drawLive(d){
 }
 
 /* ---------- what-if knobs ---------- */
-const KNOBS=[["n_ev","Electric vehicles",0,180,10],["n_pv","Rooftop solar installations",0,300,10],
-  ["n_bess","Home batteries",0,100,2],["tx_kva","Transformer rating (kVA)",315,1000,5]];
+const KNOBS=[
+  ["n_homes","Homes",50,1000,10],
+  ["n_ev","Electric vehicles",0,300,10],
+  ["n_pv","Rooftop solar installations",0,500,10],
+  ["n_bess","Home batteries",0,150,2],
+  ["n_comm","Commercial sites",0,50,1],
+  ["tx_kva","Transformer rating (kVA)",315,1500,5]
+];
 function renderKnobs(){
-  $("#knobs").innerHTML = KNOBS.map(([k,lab,mn,mx,st])=>
-    `<div class="knob"><label for="k_${k}">${lab}<b id="v_${k}">${P[k]}</b></label>
-     <input id="k_${k}" type="range" min="${mn}" max="${mx}" step="${st}" value="${P[k]}"></div>`).join("");
-  KNOBS.forEach(([k])=>{
-    const el=$("#k_"+k);
-    el.oninput=()=>{ $("#v_"+k).textContent=el.value; };
-  });
-  $("#applyCfg").onclick=async()=>{
-    liveStop();
-    KNOBS.forEach(([k])=>P[k]=Number($("#k_"+k).value));
-    $("#cfgState").textContent="rebuilding the feeder and refitting the forecaster…";
-    $("#applyCfg").disabled=true;
-    try{
-      for(const k in D.scenarios){ const t=D.scenarios[k].title, d=D.scenarios[k].desc;
-        D.scenarios[k]={title:t,desc:d}; }
-      D.meta = await j("/api/meta?"+qs()); renderPlate();
-      const b = await j("/api/forecast/benchmark?"+qs());
-      D.forecast_benchmark=b.models; D.pv_calibration=b.pv_ensemble; renderForecastTable();
-      await select(current,true);
-      $("#cfgState").textContent="done";
-    }catch(e){ $("#cfgState").textContent="failed: "+e.message; }
-    $("#applyCfg").disabled=false;
-  };
+  const host=$("#knobs"); if(!host) return;
+  host.innerHTML=KNOBS.map(([k,lab,mn,mx,st])=>`<div class="knob"><label for="k_${k}">${lab}<b id="v_${k}">${P[k]}</b></label><input id="k_${k}" type="range" min="${mn}" max="${mx}" step="${st}" value="${P[k]}"></div>`).join("");
+  KNOBS.forEach(([k])=>{const el=$("#k_"+k); el.oninput=()=>$("#v_"+k).textContent=el.value;});
+  $("#applyCfg").onclick=applyConfig;
 }
-
-$("#runCo").onclick=()=>liveStart("coordinated");
-$("#runUn").onclick=()=>liveStart("uncoordinated");
-$("#runStop").onclick=liveStop;
+async function applyConfig(){
+  liveStop();
+  KNOBS.forEach(([k])=>P[k]=Number($("#k_"+k).value));
+  $("#cfgState").textContent="Rebuilding feeder and refreshing forecasts…";
+  $("#applyCfg").disabled=true;
+  try{
+    Object.keys(D.scenarios).forEach(k=>{const {title,desc}=D.scenarios[k];D.scenarios[k]={title,desc};});
+    D.meta=await j("/api/meta?"+qs()); renderPlate();
+    const b=await j("/api/forecast/benchmark?"+qs()); D.forecast_benchmark=b.models; D.pv_calibration=b.pv_ensemble; renderForecastTable();
+    await select(current,true);
+    $("#cfgState").textContent="Configuration applied · feeder and forecast refreshed";
+  }catch(e){$("#cfgState").textContent="Configuration refresh failed: "+friendlyError(e);}
+  finally{$("#applyCfg").disabled=false;}
+}
+function renderWeatherCards(){
+  const host=$("#weatherCards"); if(!host) return;
+  const order=["normal","cloud","heat","shortage","evsurge","battfail","spike"];
+  host.innerHTML=order.filter(k=>D.scenarios[k]).map(k=>{const s=D.scenarios[k]; const icon=SCENARIO_ICON[k]||"•"; return `<button type="button" class="weatherCard ${k===current?"active":""}" data-weather="${k}"><div class="wi">${icon}</div><b>${s.title.replace(/^\S+\s/,"")}</b><span>${s.desc||"Stress condition"}</span></button>`}).join("");
+  host.querySelectorAll("[data-weather]").forEach(b=>b.onclick=()=>select(b.dataset.weather));
+}
 
 function renderPlate(){
   const m=D.meta;
@@ -523,6 +546,5 @@ function renderPlate(){
 }
 
 let rt; addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>select(current,false),200)});
-boot().catch(e=>{ document.querySelector(".wrap").insertAdjacentHTML("afterbegin",
-  `<p class="loading">Backend not reachable (${e.message}). Start it with <code>uvicorn server:app --port 8000</code>, or open static-demo.html.</p>`); });
+boot();
 </script></body></html>
