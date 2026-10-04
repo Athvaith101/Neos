@@ -46,9 +46,9 @@ CAPABILITIES = {
 def platform_manifest() -> dict:
     return {
         "name": "NEOS — Neighbourhood Energy Operating System",
-        "version": "Final Candidate 1.0-research",
+        "version": "NEOS 1.0",
         "kits": [asdict(k) for k in KITS],
         "capabilities": dict(CAPABILITIES),
         "evidence_rule": "OpenDSS-generated results remain the authoritative quantitative evidence; broader modules do not replace them.",
-        "deployment_boundary": "Simulation / research prototype. No physical actuator control.",
+        "deployment_boundary": "Simulation environment. No physical actuator control.",
     }
