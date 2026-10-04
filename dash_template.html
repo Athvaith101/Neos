@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neighbourhood Energy OS — feeder coordination study</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EDEFEC; --panel:#FAFBF9; --rule:#C8D0CC; --rule-soft:#DFE4E0;
+  --ink:#16221F; --ink-2:#4B5A55; --ink-3:#7B8A84;
+  --ok:#1F7A5C; --warn:#B7791F; --bad:#AE3B2C;
+  --solar:#D9922B; --store:#3D7699; --ev:#6B5B95; --grid:#16221F;
+  --plot:#FFFFFF; --shadow:0 1px 0 var(--rule-soft);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0E1619; --panel:#151F23; --rule:#2B3A40; --rule-soft:#222E33;
+    --ink:#E4ECE8; --ink-2:#A2B2AD; --ink-3:#7A8A86;
+    --ok:#4FBF95; --warn:#E0A63B; --bad:#E2705E;
+    --solar:#E5A643; --store:#6BA8CC; --ev:#A08DD0; --grid:#E4ECE8;
+    --plot:#101A1E; --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0E1619; --panel:#151F23; --rule:#2B3A40; --rule-soft:#222E33;
+  --ink:#E4ECE8; --ink-2:#A2B2AD; --ink-3:#7A8A86;
+  --ok:#4FBF95; --warn:#E0A63B; --bad:#E2705E;
+  --solar:#E5A643; --store:#6BA8CC; --ev:#A08DD0; --grid:#E4ECE8;
+  --plot:#101A1E; --shadow:none;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:15.5px;line-height:1.55;-webkit-font-smoothing:antialiased;
+  font-variant-numeric:tabular-nums lining-nums}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px 72px}
+h1,h2,h3{font-weight:600;letter-spacing:-0.012em;margin:0}
+a{color:inherit}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+
+/* ---------- masthead ---------- */
+header.top{border-bottom:1px solid var(--rule);margin-bottom:26px}
+.top-in{max-width:1080px;margin:0 auto;padding:30px 20px 22px;
+  display:flex;flex-wrap:wrap;gap:22px;align-items:flex-end;justify-content:space-between}
+h1{font-size:clamp(26px,4.4vw,38px);line-height:1.08;max-width:15ch}
+.sub{color:var(--ink-2);margin-top:9px;max-width:56ch;font-size:15px}
+.plate{border:1px solid var(--rule);background:var(--panel);padding:11px 14px;
+  display:grid;grid-template-columns:repeat(2,auto);gap:3px 20px;font-size:13px}
+.plate div{display:flex;gap:8px;justify-content:space-between;color:var(--ink-2)}
+.plate b{font-weight:500;color:var(--ink)}
+
+/* ---------- scenario rail ---------- */
+.rail{display:flex;gap:7px;overflow-x:auto;padding-bottom:6px;margin-bottom:18px}
+.chip{flex:0 0 auto;border:1px solid var(--rule);background:var(--panel);color:var(--ink-2);
+  padding:7px 13px;font:inherit;font-size:13.5px;cursor:pointer;border-radius:2px;
+  transition:background .12s,color .12s,border-color .12s}
+.chip:hover{border-color:var(--ink-3);color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chip:focus-visible{outline:2px solid var(--store);outline-offset:2px}
+
+/* ---------- panels ---------- */
+.panel{background:var(--panel);border:1px solid var(--rule);padding:18px 18px 14px;
+  box-shadow:var(--shadow)}
+.panel + .panel{margin-top:14px}
+.ptitle{display:flex;align-items:baseline;justify-content:space-between;gap:14px;
+  margin-bottom:3px}
+.ptitle h2{font-size:16.5px}
+.ptitle span{color:var(--ink-3);font-size:12.5px}
+.note{color:var(--ink-2);font-size:13.5px;margin:2px 0 14px;max-width:74ch}
+
+.switchbar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:2px 0 12px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--ink-2)}
+.legend i{display:inline-block;width:20px;height:2px;vertical-align:middle;margin-right:6px}
+.legend i.dash{height:0;border-top:2px dashed currentColor}
+
+svg{display:block;width:100%;height:auto;overflow:visible}
+.axis{stroke:var(--rule);stroke-width:1}
+.gridline{stroke:var(--rule-soft);stroke-width:1}
+.tick{fill:var(--ink-3);font-size:10.5px}
+.alab{fill:var(--ink-2);font-size:11px}
+
+/* ---------- verdict + metrics ---------- */
+.two{display:grid;grid-template-columns:1fr;gap:14px;margin-top:14px}
+@media(min-width:840px){.two{grid-template-columns:320px 1fr}}
+.verdict p{margin:0 0 10px;font-size:14px;color:var(--ink-2)}
+.verdict p:last-child{margin-bottom:0}
+.verdict b{color:var(--ink);font-weight:600}
+
+table.metrics{width:100%;border-collapse:collapse;font-size:13.5px}
+table.metrics th{text-align:right;font-weight:500;color:var(--ink-3);font-size:12px;
+  padding:0 0 7px;border-bottom:1px solid var(--rule)}
+table.metrics th:first-child{text-align:left}
+table.metrics td{padding:9px 0;border-bottom:1px solid var(--rule-soft);text-align:right}
+table.metrics td:first-child{text-align:left;color:var(--ink-2)}
+table.metrics tr:last-child td{border-bottom:0}
+.delta{font-weight:600}
+.delta.good{color:var(--ok)} .delta.bad{color:var(--bad)} .delta.flat{color:var(--ink-3)}
+.bar{height:4px;background:var(--rule-soft);position:relative;margin-top:5px}
+.bar span{position:absolute;inset:0 auto 0 0;background:var(--ink-3)}
+.bar span.after{background:var(--ok)}
+
+/* ---------- forecast table ---------- */
+h3{font-size:14px;margin:20px 0 6px;color:var(--ink)}
+ul.lim{margin:6px 0 0 18px;padding:0;color:var(--ink-2);font-size:13px}ul.lim li{margin:4px 0}
+table.fc{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+table.fc th,table.fc td{padding:7px 8px;border-bottom:1px solid var(--rule-soft);text-align:right}
+table.fc th{color:var(--ink-3);font-weight:500;font-size:11.5px;border-bottom:1px solid var(--rule)}
+table.fc th:first-child,table.fc td:first-child{text-align:left}
+table.fc tr.hl td{background:color-mix(in srgb,var(--ok) 9%,transparent);font-weight:500}
+table.fc td.miss{color:var(--bad)} table.fc td.hit{color:var(--ok)}
+
+.foot{margin-top:38px;padding-top:18px;border-top:1px solid var(--rule);
+  color:var(--ink-3);font-size:13px;max-width:78ch}
+.scroll{overflow-x:auto}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div>
+      <h1>One transformer, 300 homes, no one told to change their day</h1>
+      <p class="sub">A distribution feeder simulated with an unbalanced three-phase load flow, driven by causal probabilistic forecasts and a
+      chance-constrained optimiser. Every action is re-solved against the AC power flow and labelled verified, infeasible or solver-failed. A research simulator: it commands no equipment.</p>
+    </div>
+    <div class="plate" id="plate"></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="rail" id="rail" role="group" aria-label="Scenario"></div>
+
+  <section class="panel">
+    <div class="ptitle"><h2 id="scTitle"></h2><span id="scDesc"></span></div>
+    <div class="switchbar">
+      <div class="legend">
+        <span style="color:var(--bad)"><i></i>No coordination</span>
+        <span style="color:var(--ok)"><i></i>Coordinated</span>
+        <span style="color:var(--ink-3)"><i class="dash"></i>Transformer rating</span>
+      </div>
+    </div>
+    <div id="heroChart"></div>
+  </section>
+
+  <div class="two">
+    <section class="panel verdict">
+      <div class="ptitle"><h2>What the system did</h2></div>
+      <div id="verdict"></div>
+    </section>
+    <section class="panel">
+      <div class="ptitle"><h2>Outcome</h2><span>24 h window, 12:00 → 12:00</span></div>
+      <div class="scroll"><table class="metrics" id="metrics"></table></div>
+    </section>
+  </div>
+
+  <section class="panel">
+    <div class="ptitle"><h2>Where the flexibility came from</h2><span>coordinated run</span></div>
+    <p class="note">Nobody was switched off. Electric vehicles, home storage and deferrable appliances were
+    moved inside the limits their owners had already accepted — into the solar window and the overnight
+    trough, and out of the evening peak.</p>
+    <div class="legend" style="margin-bottom:8px">
+      <span style="color:var(--solar)"><i></i>Rooftop solar available</span>
+      <span style="color:var(--ev)"><i></i>EV charging</span>
+      <span style="color:var(--store)"><i></i>Storage</span>
+      <span style="color:var(--ink-2)"><i></i>Deferrable appliances</span>
+    </div>
+    <div id="flexChart"></div>
+  </section>
+
+  <section class="panel">
+    <div class="ptitle"><h2>Voltage at the worst node on the feeder</h2><span>statutory band ±6 %</span></div>
+    <p class="note">Peak kilowatts are the headline, but voltage is what actually fails first on Indian LV
+    feeders. The safety layer treats the lower band as a hard constraint, not a penalty term.</p>
+    <div id="voltChart"></div>
+  </section>
+
+  <section class="panel">
+    <div class="ptitle"><h2>The forecast the controller was given</h2><span>day-ahead, issued at 12:00</span></div>
+    <p class="note">The optimiser never sees a single number. It sizes import headroom from the upper
+    demand quantile and the lower solar quantile, so the width of these bands is a safety input — which is
+    why the bands are calibrated rather than merely sharp.</p>
+    <div id="fcChart"></div>
+  </section>
+
+  <section class="panel">
+    <div class="ptitle"><h2>Did the clever model earn its place?</h2><span>chronological hold-out, 7 unseen days</span></div>
+    <p class="note">Baselines first. A model only ships if it beats causal baselines on a quantile score
+    <em>and</em> its stated intervals hold at every lead time. Every feature is built from an explicit forecast
+    issue time, and weather inputs are issue-time forecasts, never realised weather. Raw quantile regression
+    under-covers; conformal widening on a later calibration block repairs it, but coverage is measured, not assumed.</p>
+    <div class="scroll"><table class="fc" id="fcTable"></table></div>
+  </section>
+
+  <section class="panel">
+    <div class="ptitle"><h2>Evidence, not a single run</h2><span>paired · multi-seed · held-out</span></div>
+    <div id="evidence"></div>
+  </section>
+
+  <section class="panel">
+    <div class="ptitle"><h2>How a decision is made</h2><span>every 30 minutes</span></div>
+    <div id="pipe"></div>
+  </section>
+
+  <p class="foot" id="foot"></p>
+</div>
+
+<script>
+const D = __DATA__;
+const DT = 0.25, T0 = 12;            // window starts at 12:00
+const $ = s => document.querySelector(s);
+const NS = "http://www.w3.org/2000/svg";
+let current = "normal";
+
+const fmt = (v,d=0)=>v.toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
+const hourOf = i => (T0 + i*DT) % 24;
+
+/* ---------------- tiny SVG chart kit ---------------- */
+function svgEl(tag, attrs={}){const e=document.createElementNS(NS,tag);
+  for(const k in attrs) e.setAttribute(k, attrs[k]); return e;}
+
+function frame(host, {h=250, ml=46, mr=12, mt=12, mb=26, w=900}={}){
+  host.innerHTML="";
+  const s=svgEl("svg",{viewBox:`0 0 ${w} ${h}`,preserveAspectRatio:"none",role:"img"});
+  s.style.height=h+"px"; s.removeAttribute("preserveAspectRatio");
+  s.setAttribute("viewBox",`0 0 ${w} ${h}`);
+  host.appendChild(s);
+  return {s,w,h,ml,mr,mt,mb,pw:w-ml-mr,ph:h-mt-mb};
+}
+function xAxis(F, n, {every=8}={}){
+  const y=F.h-F.mb;
+  F.s.appendChild(svgEl("line",{x1:F.ml,y1:y,x2:F.w-F.mr,y2:y,class:"axis"}));
+  for(let i=0;i<n;i+=every){
+    const x=F.ml+F.pw*i/(n-1);
+    const t=svgEl("text",{x,y:y+15,class:"tick","text-anchor":"middle"});
+    t.textContent=String(Math.round(hourOf(i))).padStart(2,"0")+":00";
+    F.s.appendChild(t);
+  }
+}
+function yAxis(F, lo, hi, ticks, suffix=""){
+  for(const v of ticks){
+    const y=F.mt+F.ph*(1-(v-lo)/(hi-lo));
+    F.s.appendChild(svgEl("line",{x1:F.ml,y1:y,x2:F.w-F.mr,y2:y,class:"gridline"}));
+    const t=svgEl("text",{x:F.ml-8,y:y+3.5,class:"tick","text-anchor":"end"});
+    t.textContent=v+suffix; F.s.appendChild(t);
+  }
+}
+const sx=(F,i,n)=>F.ml+F.pw*i/(n-1);
+const sy=(F,v,lo,hi)=>F.mt+F.ph*(1-(v-lo)/(hi-lo));
+function path(F, arr, lo, hi){
+  return arr.map((v,i)=>`${i?"L":"M"}${sx(F,i,arr.length).toFixed(1)},${sy(F,v,lo,hi).toFixed(1)}`).join("");
+}
+function line(F, arr, lo, hi, color, {width=1.8, dash=null, anim=false, op=1}={}){
+  const p=svgEl("path",{d:path(F,arr,lo,hi),fill:"none",stroke:color,
+    "stroke-width":width,"stroke-linejoin":"round","stroke-opacity":op});
+  if(dash)p.setAttribute("stroke-dasharray",dash);
+  F.s.appendChild(p);
+  if(anim && !matchMedia("(prefers-reduced-motion: reduce)").matches){
+    const L=p.getTotalLength();
+    p.style.strokeDasharray=L; p.style.strokeDashoffset=L;
+    p.animate([{strokeDashoffset:L},{strokeDashoffset:0}],
+      {duration:900,easing:"cubic-bezier(.4,0,.2,1)",fill:"forwards"});
+  }
+  return p;
+}
+function band(F, loArr, hiArr, lo, hi, color, op=0.16){
+  const n=loArr.length;
+  let d=hiArr.map((v,i)=>`${i?"L":"M"}${sx(F,i,n).toFixed(1)},${sy(F,v,lo,hi).toFixed(1)}`).join("");
+  for(let i=n-1;i>=0;i--) d+=`L${sx(F,i,n).toFixed(1)},${sy(F,loArr[i],lo,hi).toFixed(1)}`;
+  F.s.appendChild(svgEl("path",{d:d+"Z",fill:color,"fill-opacity":op,stroke:"none"}));
+}
+function area(F, arr, lo, hi, color, op=0.5){
+  const n=arr.length, base=sy(F,Math.max(lo,0),lo,hi);
+  let d=`M${sx(F,0,n)},${base}`+arr.map((v,i)=>`L${sx(F,i,n).toFixed(1)},${sy(F,v,lo,hi).toFixed(1)}`).join("")+
+    `L${sx(F,n-1,n)},${base}Z`;
+  F.s.appendChild(svgEl("path",{d,fill:color,"fill-opacity":op,stroke:"none"}));
+}
+function label(F,x,y,text,color,anchor="start",size=11){
+  const t=svgEl("text",{x,y,fill:color,"font-size":size,"text-anchor":anchor});
+  t.textContent=text; F.s.appendChild(t); return t;
+}
+
+/* ---------------- charts ---------------- */
+function drawHero(sc, animate){
+  const u=sc.uncoordinated_series.tx_loading, c=sc.coordinated_series.tx_loading;
+  const hi=Math.max(140, Math.ceil(Math.max(...u,...c)/20)*20+10), lo=0;
+  const F=frame($("#heroChart"),{h:272});
+  yAxis(F,lo,hi,[0,25,50,75,100,125].filter(v=>v<=hi),"%");
+  xAxis(F,u.length);
+  const y100=sy(F,100,lo,hi);
+  F.s.appendChild(svgEl("line",{x1:F.ml,y1:y100,x2:F.w-F.mr,y2:y100,
+    stroke:"var(--bad)","stroke-width":1.4,"stroke-dasharray":"5 4","stroke-opacity":.8}));
+  label(F,F.w-F.mr,y100-7,"100 % of transformer rating","var(--bad)","end",10.5);
+  line(F,u,lo,hi,"var(--bad)",{width:1.9,anim:animate,op:.95});
+  line(F,c,lo,hi,"var(--ok)",{width:2.4,anim:animate});
+  const um=Math.max(...u), ui=u.indexOf(um), cm=Math.max(...c);
+  label(F,sx(F,ui,u.length)+6,sy(F,um,lo,hi)-6,fmt(um,1)+" %","var(--bad)","start",11.5);
+  label(F,F.ml+6,sy(F,cm,lo,hi)-8,"peak "+fmt(cm,1)+" %","var(--ok)","start",11.5);
+  label(F,F.ml,F.h-2,"% of 630 kVA distribution transformer","var(--ink-3)","start",10.5);
+}
+
+function drawFlex(sc){
+  const s=sc.coordinated_series;
+  const pv=s.pv_avail.map(v=>-v), ev=s.ev_charge, bt=s.batt, df=s.defer;
+  const hi=Math.ceil(Math.max(...ev,...bt,...df,10)/25)*25;
+  const lo=-Math.ceil(Math.max(...s.pv_avail,10)/50)*50;
+  const F=frame($("#flexChart"),{h:210});
+  const ticks=[]; for(let v=lo;v<=hi;v+=(hi-lo)/4) ticks.push(Math.round(v));
+  yAxis(F,lo,hi,ticks,"");
+  xAxis(F,ev.length);
+  area(F,pv,lo,hi,"var(--solar)",.30);
+  line(F,pv,lo,hi,"var(--solar)",{width:1.3,op:.8});
+  line(F,ev,lo,hi,"var(--ev)",{width:2});
+  line(F,bt,lo,hi,"var(--store)",{width:1.8});
+  line(F,df,lo,hi,"var(--ink-2)",{width:1.6});
+  label(F,F.ml,F.h-2,"kW  (solar shown as generation, below zero)","var(--ink-3)","start",10.5);
+}
+
+function drawVolt(sc){
+  const u=sc.uncoordinated_series.vmin, c=sc.coordinated_series.vmin;
+  const lo=Math.min(0.925,Math.min(...u,...c)-0.006), hi=1.005;
+  const F=frame($("#voltChart"),{h:190});
+  yAxis(F,lo,hi,[0.94,0.96,0.98,1.00],"");
+  xAxis(F,u.length);
+  const y94=sy(F,0.94,lo,hi);
+  F.s.appendChild(svgEl("rect",{x:F.ml,y:y94,width:F.pw,height:Math.max(0,F.mt+F.ph-y94),
+    fill:"var(--bad)","fill-opacity":.08}));
+  F.s.appendChild(svgEl("line",{x1:F.ml,y1:y94,x2:F.w-F.mr,y2:y94,stroke:"var(--bad)",
+    "stroke-width":1.2,"stroke-dasharray":"5 4","stroke-opacity":.8}));
+  label(F,F.w-F.mr,y94+14,"0.94 pu statutory floor","var(--bad)","end",10.5);
+  line(F,u,lo,hi,"var(--bad)",{width:1.8,op:.95});
+  line(F,c,lo,hi,"var(--ok)",{width:2.2});
+  label(F,F.ml,F.h-2,"per-unit voltage, worst LV node","var(--ink-3)","start",10.5);
+}
+
+function drawForecast(sc){
+  const f=sc.forecast, n=f.inflex_p50.length;
+  const dem=sc.uncoordinated_series.net;
+  const hi=Math.ceil(Math.max(...f.inflex_p90,...f.pv_p90)/50)*50+20, lo=0;
+  const F=frame($("#fcChart"),{h:210});
+  const ticks=[]; for(let v=0;v<=hi;v+=Math.round(hi/4/25)*25) ticks.push(v);
+  yAxis(F,lo,hi,ticks,"");
+  xAxis(F,n);
+  band(F,f.pv_p10,f.pv_p90,lo,hi,"var(--solar)",.22);
+  line(F,f.pv_p50,lo,hi,"var(--solar)",{width:1.8});
+  band(F,f.inflex_p10,f.inflex_p90,lo,hi,"var(--store)",.20);
+  line(F,f.inflex_p50,lo,hi,"var(--store)",{width:1.8});
+  label(F,F.ml+8,sy(F,f.pv_p90[24]||100,lo,hi)-8,"solar P10–P90","var(--solar)","start",11);
+  label(F,F.ml+8,sy(F,f.inflex_p50[70]||200,lo,hi)-10,"inflexible demand P10–P90","var(--store)","start",11);
+  label(F,F.ml,F.h-2,"kW","var(--ink-3)","start",10.5);
+}
+
+function drawPipe(){
+  const steps=[
+    ["Sense","15-min telemetry from 336 metered points"],
+    ["Forecast","demand & solar as calibrated distributions"],
+    ["Envelope","each user's requirement, with its uncertainty"],
+    ["Optimise","chance-constrained LP over the next 24 h"],
+    ["Verify","unbalanced AC power flow on the digital twin"],
+    ["Act","setpoints, or the projected safe version of them"]
+  ];
+  const w=900,h=112,F={s:svgEl("svg",{viewBox:`0 0 ${w} ${h}`}),w,h};
+  $("#pipe").innerHTML=""; F.s.style.height=h+"px"; $("#pipe").appendChild(F.s);
+  const bw=(w-5*10)/6;
+  steps.forEach((st,i)=>{
+    const x=i*(bw+10);
+    F.s.appendChild(svgEl("rect",{x,y:14,width:bw,height:60,fill:"none",
+      stroke:i===4?"var(--ok)":"var(--rule)","stroke-width":i===4?1.6:1}));
+    const a=svgEl("text",{x:x+11,y:36,fill:"var(--ink)","font-size":13,"font-weight":600});
+    a.textContent=st[0]; F.s.appendChild(a);
+    const words=st[1].split(" "); let ln=[""],li=0;
+    words.forEach(wd=>{ if((ln[li]+" "+wd).trim().length>Math.floor(bw/5.4)){li++;ln[li]=wd;} else ln[li]=(ln[li]+" "+wd).trim(); });
+    ln.slice(0,3).forEach((t,k)=>{
+      const e=svgEl("text",{x:x+11,y:50+k*11,fill:"var(--ink-2)","font-size":9.8});
+      e.textContent=t; F.s.appendChild(e);
+    });
+    if(i<5){
+      F.s.appendChild(svgEl("path",{d:`M${x+bw+1},44 L${x+bw+8},44`,stroke:"var(--ink-3)","stroke-width":1}));
+    }
+  });
+  F.s.appendChild(svgEl("path",{d:`M${w-bw/2},78 L${w-bw/2},94 L${bw/2},94 L${bw/2},78`,
+    fill:"none",stroke:"var(--rule)","stroke-width":1,"stroke-dasharray":"4 3"}));
+  const t=svgEl("text",{x:w/2,y:108,fill:"var(--ink-3)","font-size":10,"text-anchor":"middle"});
+  t.textContent="measured outcome corrects the twin's own limits on the next cycle";
+  F.s.appendChild(t);
+}
+
+/* ---------------- metrics + verdict ---------------- */
+const ROWS=[
+  ["Peak transformer loading", m=>m.peak_tx_loading, "%", 1, "down"],
+  ["Hours above nameplate rating", m=>m.hours_over_100, " h", 2, "down"],
+  ["Lowest feeder voltage", m=>m.min_voltage, " pu", 3, "up"],
+  ["Worst line loading (ampacity)", m=>m.max_line_loading, "%", 1, "down"],
+  ["Node-hours outside the voltage band", m=>m.node_hours_v_violation, "", 1, "down"],
+  ["Steps fully AC-verified", m=>m.steps_verified_pct, " %", 1, "up"],
+  ["Neighbourhood electricity bill", m=>m.total_cost_inr, " ₹", 0, "down"],
+  ["Solar used locally", m=>m.pv_self_consumption*100, " %", 1, "up"],
+  ["Solar curtailed (planned + protective)", m=>m.curtailed_kwh, " kWh", 0, "down"],
+  ["Network losses", m=>m.losses_kwh, " kWh", 0, "down"],
+  ["Safety-layer interventions", m=>m.safety_interventions, "", 0, "down"],
+  ["EV owners who got the charge they asked for", m=>m.ev_satisfaction*100, " %", 1, "up"]
+];
+
+function renderMetrics(sc){
+  const u=sc.uncoordinated, c=sc.coordinated, r=sc.rule_tou;
+  let html="<tr><th>Measure</th><th>No coordination</th>"+(r?"<th>Rule-based (ToU)</th>":"")+"<th>Optimiser (MPC)</th><th>Change vs none</th></tr>";
+  for(const [name,get,unit,dp,dir] of ROWS){
+    const a=get(u), b=get(c);
+    const raw = a===0 ? (b===0?0:100) : (b-a)/Math.abs(a)*100;
+    const improved = dir==="down" ? b < a-1e-9 : b > a+1e-9;
+    const same = Math.abs(b-a) < (unit===" pu"?1e-4:1e-6);
+    const cls = same ? "flat" : (improved ? "good" : "bad");
+    const arrow = same ? "—" : (raw>0? "+" : "") + fmt(raw,0)+" %";
+    html+=`<tr><td>${name}</td><td>${fmt(a,dp)}${unit}</td>`+(r?`<td>${fmt(get(r),dp)}${unit}</td>`:"")+
+      `<td><b>${fmt(b,dp)}${unit}</b></td><td class="delta ${cls}">${arrow}</td></tr>`;
+  }
+  $("#metrics").innerHTML=html;
+}
+
+function renderVerdict(sc){
+  const u=sc.uncoordinated, c=sc.coordinated;
+  const peakDrop=(u.peak_tx_loading-c.peak_tx_loading);
+  const saved=u.total_cost_inr-c.total_cost_inr;
+  const curtSaved=u.curtailed_kwh-c.curtailed_kwh;
+  const over = c.peak_tx_loading>100;
+  let html="";
+  html+=`<p>The optimiser moved <b>${fmt(sc.coordinated_series.ev_charge.reduce((a,b)=>a+b,0)*DT,0)} kWh</b>
+    of EV charging, <b>${fmt(sc.coordinated_series.defer.reduce((a,b)=>a+b,0)*DT,0)} kWh</b> of deferrable
+    appliance load and the neighbourhood's storage out of the evening peak.</p>`;
+  html+=`<p>Transformer loading fell <b>${fmt(peakDrop,1)} percentage points</b>
+    ${over? "but still crosses the nameplate rating — this event is larger than the flexibility available, and the system degrades gracefully rather than pretending otherwise."
+          : "and the feeder stayed inside its thermal and voltage limits for the whole day."}</p>`;
+  html+=`<p>${curtSaved>1? `<b>${fmt(curtSaved,0)} kWh</b> of rooftop solar that would have been curtailed on overvoltage was absorbed locally instead. `:""}
+    The neighbourhood bill fell by <b>₹${fmt(saved,0)}</b>, and
+    <b>${fmt(c.ev_satisfaction*100,0)} %</b> of drivers still left with the charge they had asked for.</p>`;
+  const st=c.constraint_status_steps||{};
+  if(c.safety_interventions>0)
+    html+=`<p>The safety layer modified the plan <b>${c.safety_interventions}</b> time(s) because the AC power flow
+      disagreed with it. It re-solved every action it returned: <b>${st.verified||0}</b> of 96 steps are verified,
+      <b>${st.infeasible||0}</b> infeasible (a limit is still breached and is reported, not hidden),
+      <b>${st.solver_failed||0}</b> solver failures.</p>`;
+  else
+    html+=`<p>No intervention was needed: <b>${st.verified||0}</b> of 96 steps verified.</p>`;
+  if(c.override_sessions>0)
+    html+=`<p>${c.override_sessions} driver(s) changed plans mid-session. <b>${c.override_met}</b> still left with
+      the charge they asked for; the ${fmt(c.override_unavoidable_kwh,1)} kWh shortfall that remains is physically
+      undeliverable in the notice given (${fmt(c.override_avoidable_kwh,1)} kWh was avoidable).</p>`;
+  $("#verdict").innerHTML=html;
+}
+
+function renderForecastTable(){
+  const names={persistence:"Persistence (last reading)",day_persistence:"Yesterday, same time",
+    seasonal_mean_2d:"Mean of last 2 days","quantile_gbm_raw":"Quantile gradient boosting",
+    "quantile_gbm+conformal":"Quantile GBM + lead-bucketed conformal"};
+  let h="<tr><th>Model</th><th>MAE (kW)</th><th>RMSE (kW)</th><th>Mean pinball</th><th>80 % interval score</th><th>Coverage 0-6h / 6-12h / 12h+</th></tr>";
+  const b=D.forecast_benchmark;
+  for(const k in names){
+    const r=b[k]; if(!r) continue;
+    const hl = k==="quantile_gbm+conformal" ? ' class="hl"' : "";
+    const cbl=r.coverage_by_lead;
+    const cov = !cbl ? '<span style="color:var(--ink-3)">point forecast</span>' :
+      Object.values(cbl).map(v=>`<span class="${v!=null&&Math.abs(v-0.8)<0.07?'hit':'miss'}">${v==null?'–':fmt(v*100,0)+' %'}</span>`).join(" / ");
+    h+=`<tr${hl}><td>${names[k]}</td><td>${fmt(r.mae,2)}</td><td>${fmt(r.rmse,2)}</td>`+
+       `<td>${fmt(r.mean_pinball,2)}</td><td>${r.interval_score_80==null?"–":fmt(r.interval_score_80,1)}</td><td>${cov}</td></tr>`;
+  }
+  const pc=D.pv_calibration||{};
+  h+=`<tr><td>Solar ensemble P10-P90 coverage by scenario</td><td colspan="5" style="text-align:left">`+
+    Object.keys(pc).map(k=>{const v=pc[k].mean; return `${k}: <span class="${Math.abs(v-0.8)<0.15?'hit':'miss'}">${fmt(v*100,0)} %</span>`;}).join(" &nbsp;·&nbsp; ")+`</td></tr>`;
+  $("#fcTable").innerHTML=h;
+}
+
+/* ---------------- evidence panel ---------------- */
+function renderEvidence(){
+  const E=D.study; if(!E){ $("#evidence").innerHTML='<p class="note">Run <code>python experiments.py</code> to generate the multi-seed study.</p>'; return; }
+  const f=(x,d=1)=>fmt(x,d), ci=o=>`${o.mean>0?'+':''}${f(o.mean)} [${f(o.ci95[0])}, ${f(o.ci95[1])}]`;
+  let h=`<h3>Paired multi-seed study, ${D.meta.replicates} replicates per scenario (development neighbourhood)</h3>
+  <div class="scroll"><table class="fc"><tr><th>Scenario</th><th>Peak %: none</th><th>rule</th><th>MPC</th><th>MPC − none, pp (95 % CI)</th>
+  <th>Bill change, ₹ (95 % CI)</th><th>EV missed (none/rule/MPC)</th><th>Verified steps % (MPC)</th><th>Infeasible steps (MPC)</th></tr>`;
+  for(const k in E){ const s=E[k], p=s.peak_tx_loading, c=s.total_cost_inr;
+    h+=`<tr><td>${D.scenarios[k]?D.scenarios[k].title.replace(/^\S+\s/,""):k}</td>
+    <td>${f(p.uncoordinated.mean)} ± ${f(p.uncoordinated.sd)}</td><td>${f(p.rule_tou.mean)}</td><td><b>${f(p.coordinated.mean)} ± ${f(p.coordinated.sd)}</b></td>
+    <td>${ci(p.delta_vs_uncoordinated)}</td><td>${ci(c.delta_vs_uncoordinated).replace(/\.\d/g,"")}</td>
+    <td>${s.ev_missed_total.uncoordinated}/${s.ev_missed_total.rule_tou}/${s.ev_missed_total.coordinated}</td>
+    <td>${f(s.steps_verified_pct.coordinated.mean)}</td><td>${s.infeasible_steps.coordinated}</td></tr>`; }
+  h+=`</table></div><p class="note">Every replicate is paired: all three arms see the identical realised weather, loads and EV behaviour.
+  Replicates differ in weather, demand noise and EV arrivals. Intervals are t-intervals on the paired difference.
+  "EV missed" counts sessions across all replicates that ended below the owner's requirement: a P10 departure commitment
+  accepts roughly one in ten tail departures, and that is measured here rather than hidden.</p>`;
+  const H=D.held_out||{}, hk=Object.keys(H);
+  if(hk.length){ h+=`<h3>Held-out neighbourhoods (populations never used in development)</h3><div class="scroll"><table class="fc"><tr><th>Neighbourhood seed</th><th>Mean peak %: none</th><th>rule</th><th>MPC</th><th>Scenarios where MPC ≤ 100 %</th></tr>`;
+    for(const k of hk){ const sc=Object.values(H[k]);
+      const m=(a)=>sc.reduce((x,o)=>x+o.peak_tx_loading[a].mean,0)/sc.length;
+      const ok=sc.filter(o=>o.peak_tx_loading.coordinated.mean<=100.5).length;
+      h+=`<tr><td>${k}</td><td>${f(m('uncoordinated'))}</td><td>${f(m('rule_tou'))}</td><td><b>${f(m('coordinated'))}</b></td><td>${ok} of ${sc.length}</td></tr>`; }
+    h+=`</table></div>`; }
+  const C=D.calibration;
+  if(C) h+=`<h3>Digital-twin calibration (physical parameter estimation)</h3><p class="note">The plant's LV impedance is ${f(C.true_scale,2)}× nameplate; the twin starts at 1.00×.
+    From ${C.n_fit} noisy voltage measurements it identifies <b>${f(C.estimated_scale,3)}×</b> (bootstrap CI ${f(C.ci95[0],3)}–${f(C.ci95[1],3)}).
+    Of dispatches the twin certified safe, the plant violated limits <b>${f(C.before.false_safe_rate*100,1)} %</b> of the time before calibration and
+    <b>${f(C.after.false_safe_rate*100,1)} %</b> after; voltage RMSE fell from ${f(C.before.v_rmse*1000,2)} to ${f(C.after.v_rmse*1000,2)} mpu.
+    ${C.note}</p>`;
+  const O=D.override_study;
+  if(O){ h+=`<h3>Explicit user requirements (“I need my car now”)</h3><div class="scroll"><table class="fc"><tr><th>Case</th><th>What happens</th><th>Met</th><th>Unavoidable shortfall</th><th>Avoidable shortfall</th><th>Peak tx %</th></tr>`;
+    for(const k in O){ const o=O[k]; h+=`<tr><td>${k.replace(/_/g," ")}</td><td style="text-align:left">${o.description}</td><td>${o.met}/${o.sessions}</td><td>${f(o.unavoidable_kwh,1)} kWh</td><td>${f(o.avoidable_kwh,1)} kWh</td><td>${f(o.peak_tx_loading)}</td></tr>`; }
+    h+=`</table></div><p class="note">A declared requirement removes the EV from discretionary optimisation and charges at the maximum the charger and battery allow.
+    It cannot create energy that cannot be delivered in the notice given: that shortfall is reported as unavoidable after notice, not promised away. Part of it is energy the optimiser had deliberately deferred before the driver spoke up: that is the price of flexibility.
+    Electrical protection keeps precedence over every request.</p>`; }
+  h+=`<h3>What this study does not show</h3><ul class="lim">`+(D.limitations||[]).map(x=>`<li>${x}</li>`).join("")+`</ul>`;
+  if(D.provenance) h+=`<p class="note">Provenance: python ${D.provenance.python}, numpy ${D.provenance.numpy}, scipy ${D.provenance.scipy}, scikit-learn ${D.provenance.sklearn},
+    OpenDSS ${D.provenance.opendssdirect||"not used (reference solver)"}; grid backend <b>${D.meta.grid_backend}</b>; source hashes recorded in results.json.</p>`;
+  $("#evidence").innerHTML=h;
+}
+
+/* ---------------- shell ---------------- */
+function renderPlate(){
+  const m=D.meta;
+  $("#plate").innerHTML=
+    `<div><span>Homes</span><b>${m.homes}</b></div>`+
+    `<div><span>Rooftop solar</span><b>${fmt(m.pv_kwp,0)} kWp</b></div>`+
+    `<div><span>Electric vehicles</span><b>${m.evs}</b></div>`+
+    `<div><span>Home batteries</span><b>${m.batteries}</b></div>`+
+    `<div><span>Commercial sites</span><b>${m.commercial}</b></div>`+
+    `<div><span>Transformer</span><b>${fmt(m.tx_kva,0)} kVA</b></div>`;
+  $("#foot").innerHTML=`Every figure on this page comes from a closed-loop simulation: `+
+    `${Object.keys(D.scenarios).length*2} runs of 96 control steps, each step solved as a linear programme and then `+
+    `verified with an unbalanced three-phase load flow (${D.meta.grid_backend}) — ${fmt(D.meta.runtime_s,0)} seconds of compute in total. `+
+    `The uncoordinated arm is not a straw man: its inverters still curtail autonomously on local overvoltage, `+
+    `exactly as a compliant installation does today.`;
+}
+
+function renderRail(){
+  const r=$("#rail");
+  for(const k in D.scenarios){
+    const b=document.createElement("button");
+    b.className="chip"; b.type="button"; b.textContent=D.scenarios[k].title;
+    b.setAttribute("aria-pressed", k===current);
+    b.onclick=()=>select(k);
+    r.appendChild(b);
+  }
+}
+function select(k, animate=true){
+  current=k;
+  [...$("#rail").children].forEach((b,i)=>
+    b.setAttribute("aria-pressed", Object.keys(D.scenarios)[i]===k));
+  const sc=D.scenarios[k];
+  $("#scTitle").textContent=sc.title.replace(/^\S+\s/,"");
+  $("#scDesc").textContent=sc.desc;
+  drawHero(sc,animate); drawFlex(sc); drawVolt(sc); drawForecast(sc); renderMetrics(sc); renderVerdict(sc);
+}
+renderPlate(); renderRail(); renderForecastTable(); renderEvidence(); drawPipe(); select("normal",true);
+let rt; addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>select(current,false),150)});
+</script>
+</body>
+</html>

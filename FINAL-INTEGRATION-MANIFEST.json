@@ -1,0 +1,33 @@
+{
+  "name": "NEOS — Neighbourhood Energy Operating System",
+  "version": "Final Candidate 1.0-research",
+  "base": "V3 Stage-1 OpenDSS-verified core",
+  "merged_operating_layers": [
+    "urban/suburban kit",
+    "low-income/community hub simulation",
+    "rural resource and scheduling simulation",
+    "phase-aware telemetry model",
+    "reserve utilities",
+    "generic resource models",
+    "offline continuity utilities",
+    "DISCOM flexibility interface utilities",
+    "verification ledger",
+    "islanding state machine",
+    "claims/evidence helpers",
+    "Flexibility Envelope",
+    "Decision Trace"
+  ],
+  "quantitative_evidence": {
+    "file": "results.json",
+    "grid_backend": "opendss",
+    "status": "authoritative for current OpenDSS research evidence"
+  },
+  "not_field_validated": [
+    "physical actuator control",
+    "hardware-in-the-loop",
+    "real feeder deployment",
+    "certified public-feeder islanding",
+    "DISCOM approval"
+  ],
+  "principle": "Expand the operating-system architecture without replacing or relabelling the OpenDSS-verified evidence."
+}
