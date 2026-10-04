@@ -457,22 +457,21 @@ async function boot(){
     cat.forEach(s=>D.scenarios[s.key]={title:(SCENARIO_ICON[s.key]||"â€¢")+" "+s.title,desc:s.description});
     renderRail(); renderKnobs(); renderWeatherCards();
   }catch(e){$("#topStatus").textContent="NEOS online Â· scenarios unavailable"; return;}
-  // Heavy research panels load independently so one slow endpoint never blanks the whole console.
-  try{const b=await j("/api/forecast/benchmark?"+qs()); D.forecast_benchmark=b.models; D.pv_calibration=b.pv_ensemble; renderForecastTable();}catch(e){$("#fcTable").innerHTML=`<tr><td>Forecast benchmark is taking longer than the dashboard startup window.</td></tr>`;}
-  drawPipe();
-  try{const E=await j("/api/evidence"); Object.assign(D,{study:E.study,held_out:E.held_out,calibration:E.calibration,override_study:E.override_study,limitations:E.limitations,provenance:E.provenance}); if(E.meta&&E.meta.replicates) D.meta.replicates=E.meta.replicates;}catch(e){}
-  D.meta.grid_backend=D.meta.grid_backend||"reference"; renderEvidence();
-  try{await select(Object.keys(D.scenarios)[0],true);}catch(e){$("#scTitle").textContent="Scenario data unavailable"; $("#scDesc").textContent=friendlyError(e);}
-}
-
 async function ensure(k){
-  const sc = D.scenarios[k];
+  if(!D.scenarios || !D.scenarios[k]){
+    const data=await j('/api/scenarios');
+    D.scenarios=data.scenarios||data;
+  }
+  const sc=D.scenarios[k];
+  if(!sc) throw new Error('Scenario not found: '+k);
   if(sc.coordinated) return sc;
-  Object.assign(sc, await j("/api/compare?scenario="+k+"&"+qs()));
-  sc.title = (SCENARIO_ICON[k]||"")+" "+sc.title;
+  const result=await j('/api/compare?scenario=' + encodeURIComponent(k) + '&' + qs());
+  Object.assign(sc,result);
+  sc.title=(SCENARIO_ICON[k]||'')+' '+sc.title;
   return sc;
 }
 
+// Heavy research panels load independently so one slow endpoint never blanks the whole console.
 function renderRail(){
   const r = $("#rail"); r.innerHTML="";
   for(const k in D.scenarios){
