@@ -1,251 +1,46 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Neighbourhood Energy OS — operator console</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-:root{
-  --paper:#EDEFEC; --panel:#FAFBF9; --rule:#C8D0CC; --rule-soft:#DFE4E0;
-  --ink:#16221F; --ink-2:#4B5A55; --ink-3:#7B8A84;
-  --ok:#1F7A5C; --warn:#B7791F; --bad:#AE3B2C;
-  --solar:#D9922B; --store:#3D7699; --ev:#6B5B95; --grid:#16221F;
-  --plot:#FFFFFF; --shadow:0 1px 0 var(--rule-soft);
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --paper:#0E1619; --panel:#151F23; --rule:#2B3A40; --rule-soft:#222E33;
-    --ink:#E4ECE8; --ink-2:#A2B2AD; --ink-3:#7A8A86;
-    --ok:#4FBF95; --warn:#E0A63B; --bad:#E2705E;
-    --solar:#E5A643; --store:#6BA8CC; --ev:#A08DD0; --grid:#E4ECE8;
-    --plot:#101A1E; --shadow:none;
-  }
-}
-:root[data-theme="dark"]{
-  --paper:#0E1619; --panel:#151F23; --rule:#2B3A40; --rule-soft:#222E33;
-  --ink:#E4ECE8; --ink-2:#A2B2AD; --ink-3:#7A8A86;
-  --ok:#4FBF95; --warn:#E0A63B; --bad:#E2705E;
-  --solar:#E5A643; --store:#6BA8CC; --ev:#A08DD0; --grid:#E4ECE8;
-  --plot:#101A1E; --shadow:none;
-}
-*{box-sizing:border-box}
-body{margin:0;background:var(--paper);color:var(--ink);
-  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
-  font-size:15.5px;line-height:1.55;-webkit-font-smoothing:antialiased;
-  font-variant-numeric:tabular-nums lining-nums}
-.wrap{max-width:1080px;margin:0 auto;padding:0 20px 72px}
-h1,h2,h3{font-weight:600;letter-spacing:-0.012em;margin:0}
-a{color:inherit}
-.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
-
-/* ---------- masthead ---------- */
-header.top{border-bottom:1px solid var(--rule);margin-bottom:26px}
-.top-in{max-width:1080px;margin:0 auto;padding:30px 20px 22px;
-  display:flex;flex-wrap:wrap;gap:22px;align-items:flex-end;justify-content:space-between}
-h1{font-size:clamp(26px,4.4vw,38px);line-height:1.08;max-width:15ch}
-.sub{color:var(--ink-2);margin-top:9px;max-width:56ch;font-size:15px}
-.plate{border:1px solid var(--rule);background:var(--panel);padding:11px 14px;
-  display:grid;grid-template-columns:repeat(2,auto);gap:3px 20px;font-size:13px}
-.plate div{display:flex;gap:8px;justify-content:space-between;color:var(--ink-2)}
-.plate b{font-weight:500;color:var(--ink)}
-
-/* ---------- scenario rail ---------- */
-.rail{display:flex;gap:7px;overflow-x:auto;padding-bottom:6px;margin-bottom:18px}
-.chip{flex:0 0 auto;border:1px solid var(--rule);background:var(--panel);color:var(--ink-2);
-  padding:7px 13px;font:inherit;font-size:13.5px;cursor:pointer;border-radius:2px;
-  transition:background .12s,color .12s,border-color .12s}
-.chip:hover{border-color:var(--ink-3);color:var(--ink)}
-.chip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-.chip:focus-visible{outline:2px solid var(--store);outline-offset:2px}
-
-/* ---------- panels ---------- */
-.panel{background:var(--panel);border:1px solid var(--rule);padding:18px 18px 14px;
-  box-shadow:var(--shadow)}
-.panel + .panel{margin-top:14px}
-.ptitle{display:flex;align-items:baseline;justify-content:space-between;gap:14px;
-  margin-bottom:3px}
-.ptitle h2{font-size:16.5px}
-.ptitle span{color:var(--ink-3);font-size:12.5px}
-.note{color:var(--ink-2);font-size:13.5px;margin:2px 0 14px;max-width:74ch}
-
-.switchbar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:2px 0 12px}
-.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--ink-2)}
-.legend i{display:inline-block;width:20px;height:2px;vertical-align:middle;margin-right:6px}
-.legend i.dash{height:0;border-top:2px dashed currentColor}
-
-svg{display:block;width:100%;height:auto;overflow:visible}
-.axis{stroke:var(--rule);stroke-width:1}
-.gridline{stroke:var(--rule-soft);stroke-width:1}
-.tick{fill:var(--ink-3);font-size:10.5px}
-.alab{fill:var(--ink-2);font-size:11px}
-
-/* ---------- verdict + metrics ---------- */
-.two{display:grid;grid-template-columns:1fr;gap:14px;margin-top:14px}
-@media(min-width:840px){.two{grid-template-columns:320px 1fr}}
-.verdict p{margin:0 0 10px;font-size:14px;color:var(--ink-2)}
-.verdict p:last-child{margin-bottom:0}
-.verdict b{color:var(--ink);font-weight:600}
-
-table.metrics{width:100%;border-collapse:collapse;font-size:13.5px}
-table.metrics th{text-align:right;font-weight:500;color:var(--ink-3);font-size:12px;
-  padding:0 0 7px;border-bottom:1px solid var(--rule)}
-table.metrics th:first-child{text-align:left}
-table.metrics td{padding:9px 0;border-bottom:1px solid var(--rule-soft);text-align:right}
-table.metrics td:first-child{text-align:left;color:var(--ink-2)}
-table.metrics tr:last-child td{border-bottom:0}
-.delta{font-weight:600}
-.delta.good{color:var(--ok)} .delta.bad{color:var(--bad)} .delta.flat{color:var(--ink-3)}
-.bar{height:4px;background:var(--rule-soft);position:relative;margin-top:5px}
-.bar span{position:absolute;inset:0 auto 0 0;background:var(--ink-3)}
-.bar span.after{background:var(--ok)}
-
-/* ---------- forecast table ---------- */
-h3{font-size:14px;margin:20px 0 6px;color:var(--ink)}
-ul.lim{margin:6px 0 0 18px;padding:0;color:var(--ink-2);font-size:13px}ul.lim li{margin:4px 0}
-table.fc{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
-table.fc th,table.fc td{padding:7px 8px;border-bottom:1px solid var(--rule-soft);text-align:right}
-table.fc th{color:var(--ink-3);font-weight:500;font-size:11.5px;border-bottom:1px solid var(--rule)}
-table.fc th:first-child,table.fc td:first-child{text-align:left}
-table.fc tr.hl td{background:color-mix(in srgb,var(--ok) 9%,transparent);font-weight:500}
-table.fc td.miss{color:var(--bad)} table.fc td.hit{color:var(--ok)}
-
-.foot{margin-top:38px;padding-top:18px;border-top:1px solid var(--rule);
-  color:var(--ink-3);font-size:13px;max-width:78ch}
-.scroll{overflow-x:auto}
-
-.readout{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--rule);
-  border:1px solid var(--rule);margin-bottom:14px}
-@media(min-width:700px){.readout{grid-template-columns:repeat(4,1fr)}}
-.readout div{background:var(--panel);padding:9px 11px}
-.readout span{display:block;color:var(--ink-3);font-size:11px}
-.readout b{font-size:19px;font-weight:600;letter-spacing:-.01em}
-.knobs{display:grid;gap:14px;grid-template-columns:1fr}
-@media(min-width:700px){.knobs{grid-template-columns:repeat(2,1fr)}}
-.knob label{display:flex;justify-content:space-between;font-size:13px;color:var(--ink-2);margin-bottom:4px}
-.knob label b{color:var(--ink);font-weight:600}
-.knob input[type=range]{width:100%;accent-color:var(--ok)}
-.chip[disabled]{opacity:.45;cursor:default}
-.loading{color:var(--ink-3);font-size:13px}
-
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-</style>
-</head>
-<body>
-<header class="top">
-  <div class="top-in">
-    <div>
-      <h1>One transformer, 300 homes, no one told to change their day</h1>
-      <p class="sub">A distribution feeder simulated with an unbalanced three-phase load flow, driven by causal probabilistic forecasts and a
-      chance-constrained optimiser. Every action is re-solved against the AC power flow and labelled verified, infeasible or solver-failed. A research simulator: it commands no equipment.</p>
-    </div>
-    <div class="plate" id="plate"></div>
-  </div>
-</header>
-
-<div class="wrap">
-  <div class="rail" id="rail" role="group" aria-label="Scenario"></div>
-  <section class="panel" id="livePanel">
-    <div class="ptitle"><h2>Live control loop</h2><span id="liveClock">idle</span></div>
-    <p class="note">96 control steps, one every 15 simulated minutes. Each step is a fresh
-    forecast window, a fresh linear programme, and a fresh unbalanced AC power flow before
-    anything is allowed to reach a device.</p>
-    <div class="switchbar">
-      <button class="chip" id="runCo" type="button">Run coordinated</button>
-      <button class="chip" id="runUn" type="button">Run without coordination</button>
-      <button class="chip" id="runStop" type="button" disabled>Stop</button>
-      <span class="legend"><span id="liveMode" style="color:var(--ink-3)"></span></span>
-    </div>
-    <div id="liveReadout" class="readout"></div>
-    <div id="liveChart"></div>
-  </section>
-
-  <section class="panel">
-    <div class="ptitle"><h2>Change the neighbourhood</h2><span>re-runs the whole study</span></div>
-    <p class="note">The interesting question is not whether this works on one feeder. It is where the
-    benefit disappears. Move the sliders and every number on this page is recomputed from the physics.</p>
-    <div class="knobs" id="knobs"></div>
-    <div class="switchbar"><button class="chip" id="applyCfg" type="button">Apply and re-run</button>
-      <span id="cfgState" style="color:var(--ink-3);font-size:13px"></span></div>
-  </section>
-
-
-  <section class="panel">
-    <div class="ptitle"><h2 id="scTitle"></h2><span id="scDesc"></span></div>
-    <div class="switchbar">
-      <div class="legend">
-        <span style="color:var(--bad)"><i></i>No coordination</span>
-        <span style="color:var(--ok)"><i></i>Coordinated</span>
-        <span style="color:var(--ink-3)"><i class="dash"></i>Transformer rating</span>
-      </div>
-    </div>
-    <div id="heroChart"></div>
-  </section>
-
-  <div class="two">
-    <section class="panel verdict">
-      <div class="ptitle"><h2>What the system did</h2></div>
-      <div id="verdict"></div>
-    </section>
-    <section class="panel">
-      <div class="ptitle"><h2>Outcome</h2><span>24 h window, 12:00 → 12:00</span></div>
-      <div class="scroll"><table class="metrics" id="metrics"></table></div>
-    </section>
-  </div>
-
-  <section class="panel">
-    <div class="ptitle"><h2>Where the flexibility came from</h2><span>coordinated run</span></div>
-    <p class="note">Nobody was switched off. Electric vehicles, home storage and deferrable appliances were
-    moved inside the limits their owners had already accepted — into the solar window and the overnight
-    trough, and out of the evening peak.</p>
-    <div class="legend" style="margin-bottom:8px">
-      <span style="color:var(--solar)"><i></i>Rooftop solar available</span>
-      <span style="color:var(--ev)"><i></i>EV charging</span>
-      <span style="color:var(--store)"><i></i>Storage</span>
-      <span style="color:var(--ink-2)"><i></i>Deferrable appliances</span>
-    </div>
-    <div id="flexChart"></div>
-  </section>
-
-  <section class="panel">
-    <div class="ptitle"><h2>Voltage at the worst node on the feeder</h2><span>statutory band ±6 %</span></div>
-    <p class="note">Peak kilowatts are the headline, but voltage is what actually fails first on Indian LV
-    feeders. The safety layer treats the lower band as a hard constraint, not a penalty term.</p>
-    <div id="voltChart"></div>
-  </section>
-
-  <section class="panel">
-    <div class="ptitle"><h2>The forecast the controller was given</h2><span>day-ahead, issued at 12:00</span></div>
-    <p class="note">The optimiser never sees a single number. It sizes import headroom from the upper
-    demand quantile and the lower solar quantile, so the width of these bands is a safety input — which is
-    why the bands are calibrated rather than merely sharp.</p>
-    <div id="fcChart"></div>
-  </section>
-
-  <section class="panel">
-    <div class="ptitle"><h2>Did the clever model earn its place?</h2><span>chronological hold-out, 7 unseen days</span></div>
-    <p class="note">Baselines first. A model only ships if it beats causal baselines on a quantile score
-    <em>and</em> its stated intervals hold at every lead time. Every feature is built from an explicit forecast
-    issue time, and weather inputs are issue-time forecasts, never realised weather. Raw quantile regression
-    under-covers; conformal widening on a later calibration block repairs it, but coverage is measured, not assumed.</p>
-    <div class="scroll"><table class="fc" id="fcTable"></table></div>
-  </section>
-
-  <section class="panel">
-    <div class="ptitle"><h2>Evidence, not a single run</h2><span>paired · multi-seed · held-out</span></div>
-    <div id="evidence"></div>
-  </section>
-
-  <section class="panel">
-    <div class="ptitle"><h2>How a decision is made</h2><span>every 30 minutes</span></div>
-    <div id="pipe"></div>
-  </section>
-
-  <p class="foot" id="foot"></p>
-</div>
-
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NEOS — Neighbourhood Energy Operating System</title><style>
+:root{--bg:#f4faf6;--card:#fff;--green:#16834f;--green2:#0d6b40;--mint:#e6f5ec;--mint2:#f1faf5;--ink:#10231a;--muted:#5f756a;--line:#d7e7dd;--soft:#edf5f0;--warn:#b7791f;--bad:#c63f32;--solar:#d59b27;--store:#397fa5;--ev:#7159a6;--shadow:0 10px 35px rgba(19,75,47,.08)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:linear-gradient(180deg,#f8fcf9 0,#f1f8f4 100%);color:var(--ink);font:15px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}button,input{font:inherit}a{color:inherit;text-decoration:none}.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.top{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}.top-in{max-width:1280px;margin:auto;padding:14px 28px;display:flex;align-items:center;justify-content:space-between;gap:24px}.brand{display:flex;align-items:center;gap:12px}.brandmark{width:42px;height:42px;border-radius:12px;background:var(--green);display:grid;place-items:center;color:white;font-weight:800;letter-spacing:-1px;box-shadow:0 7px 18px rgba(22,131,79,.2)}.brand strong{font-size:18px;display:block;letter-spacing:-.02em}.brand span{font-size:11px;color:var(--muted);letter-spacing:.09em;text-transform:uppercase}.topnav{display:flex;gap:5px;flex-wrap:wrap}.topnav a{padding:7px 10px;border-radius:8px;color:var(--muted);font-size:13px}.topnav a:hover{background:var(--mint);color:var(--green2)}.status{display:flex;align-items:center;gap:8px;border:1px solid #cce7d7;background:var(--mint2);padding:7px 10px;border-radius:999px;color:var(--green2);font-size:12px;white-space:nowrap}.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 4px #d9f0e2}
+.wrap{max-width:1280px;margin:auto;padding:30px 28px 80px}.hero{display:grid;grid-template-columns:1.45fr .75fr;gap:24px;align-items:stretch;margin:8px 0 22px}.heroMain,.heroSide,.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}.heroMain{padding:34px}.eyebrow{display:inline-flex;gap:7px;align-items:center;color:var(--green);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.12em}.hero h1{font-size:clamp(34px,5vw,62px);line-height:.98;letter-spacing:-.055em;margin:14px 0 16px;max-width:850px}.hero p{color:var(--muted);font-size:16px;max-width:760px;margin:0}.heroActions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}.btn{border:1px solid var(--line);background:white;color:var(--ink);border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:650}.btn.primary{background:var(--green);border-color:var(--green);color:#fff}.btn:hover{transform:translateY(-1px)}.heroSide{padding:22px;background:linear-gradient(145deg,#fff,#eef9f2)}.heroSide h3{margin:0 0 14px;font-size:14px}.heroSide .big{font-size:42px;font-weight:800;letter-spacing:-.05em;color:var(--green)}.heroSide .small{color:var(--muted);font-size:12px}.mini{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:18px}.mini div{padding:10px;background:#fff;border:1px solid var(--line);border-radius:10px}.mini b{display:block;font-size:18px}.mini span{font-size:11px;color:var(--muted)}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:0 0 22px}.kpi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 15px;box-shadow:0 5px 18px rgba(19,75,47,.045)}.kpi .v{font-size:23px;font-weight:800;letter-spacing:-.035em}.kpi .l{font-size:11px;color:var(--muted);margin-top:2px}.kpi.green .v{color:var(--green)}
+.rail{display:flex;gap:8px;overflow-x:auto;padding:3px 1px 14px;scrollbar-width:thin}.chip{flex:0 0 auto;border:1px solid var(--line);background:#fff;color:var(--muted);padding:8px 13px;font-size:13px;cursor:pointer;border-radius:999px}.chip:hover{border-color:#9ccbad;color:var(--green2)}.chip[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:white}.chip:disabled{opacity:.45;cursor:default}
+.panel{padding:22px;margin-top:16px}.ptitle{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:5px}.ptitle h2{font-size:19px;letter-spacing:-.025em;margin:0}.ptitle span{font-size:11px;color:var(--muted)}.note{color:var(--muted);font-size:13px;max-width:900px;margin:3px 0 16px}.sectionLabel{margin:34px 2px 8px;font-size:12px;font-weight:800;color:var(--green2);letter-spacing:.13em;text-transform:uppercase}.two{display:grid;grid-template-columns:.72fr 1.28fr;gap:16px;margin-top:16px}.switchbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:5px 0 12px}.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted)}.legend i{display:inline-block;width:20px;height:2px;vertical-align:middle;margin-right:6px}.legend i.dash{height:0;border-top:2px dashed currentColor}svg{display:block;width:100%;height:auto;overflow:visible}.axis{stroke:var(--line);stroke-width:1}.gridline{stroke:#e9f1ec;stroke-width:1}.tick{fill:#789086;font-size:10.5px}.alab{fill:var(--muted);font-size:11px}
+.readout{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:14px}.readout div{background:#fbfefc;padding:11px 13px}.readout span{display:block;color:var(--muted);font-size:10px}.readout b{font-size:19px;font-weight:750}.knobs{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.knob label{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:6px}.knob label b{color:var(--ink)}.knob input{width:100%;accent-color:var(--green)}
+table.metrics,table.fc{width:100%;border-collapse:collapse;font-size:12.5px}table.metrics th,table.metrics td,table.fc th,table.fc td{padding:9px 8px;border-bottom:1px solid #e8f0eb;text-align:right}table.metrics th:first-child,table.metrics td:first-child,table.fc th:first-child,table.fc td:first-child{text-align:left}table.metrics th,table.fc th{font-size:11px;color:#789086;font-weight:650}table.metrics td:first-child{color:var(--muted)}.delta{font-weight:750}.delta.good,.hit{color:var(--green)}.delta.bad,.miss{color:var(--bad)}.delta.flat{color:#82938b}.scroll{overflow-x:auto}.hl td{background:#eff9f3;font-weight:600}.lim{margin:6px 0 0 18px;padding:0;color:var(--muted);font-size:13px}.lim li{margin:5px 0}
+.gridcards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.infoCard{border:1px solid var(--line);border-radius:14px;padding:16px;background:linear-gradient(145deg,#fff,#f8fcf9)}.infoCard h3{font-size:15px;margin:0 0 7px}.infoCard p{font-size:12.5px;color:var(--muted);margin:0}.tag{display:inline-block;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;background:var(--mint);color:var(--green2);margin-bottom:10px}.tag.partial{background:#fff6df;color:#8b6218}.tag.concept{background:#f0f2f2;color:#607069}.capgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.cap{padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:#fff;display:flex;justify-content:space-between;gap:10px;align-items:center}.cap b{font-size:12px}.cap span{font-size:10px;font-weight:800;color:var(--green)}.cap.partial span{color:var(--warn)}.cap.no span{color:var(--muted)}
+.arch{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}.arch div{position:relative;padding:15px 11px;border:1px solid var(--line);border-radius:12px;background:#fbfefc;min-height:92px}.arch strong{display:block;font-size:12px;margin-bottom:6px}.arch span{font-size:10.5px;color:var(--muted)}.arch .core{border-color:#9dd1b2;background:var(--mint2)}.architectureNote{margin-top:10px;padding:12px 14px;border-radius:11px;background:#f6faf7;color:var(--muted);font-size:12px;border-left:3px solid var(--green)}
+.statusGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.statusBox{padding:13px;border:1px solid var(--line);border-radius:12px;background:#fbfefc}.statusBox .label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}.statusBox b{display:block;margin-top:3px;font-size:13px}.foot{margin-top:30px;padding:18px 4px 0;border-top:1px solid var(--line);color:#70847b;font-size:12px}.loading{padding:12px;border:1px solid #f0d39a;background:#fff8e8;color:#7b5b20;border-radius:10px}.monoBlock{background:#10231a;color:#dcefe4;border-radius:12px;padding:13px;overflow:auto;font:11px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace}.evidenceCallout{padding:15px;border-radius:13px;background:#edf8f1;border:1px solid #c9e7d4;margin-bottom:14px}.evidenceCallout strong{color:var(--green2)}
+@media(max-width:1050px){.hero{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(3,1fr)}.arch{grid-template-columns:repeat(3,1fr)}.capgrid,.gridcards{grid-template-columns:repeat(2,1fr)}}@media(max-width:760px){.top-in{padding:12px 16px}.topnav{display:none}.wrap{padding:20px 15px 60px}.heroMain{padding:24px}.hero h1{font-size:42px}.kpis{grid-template-columns:repeat(2,1fr)}.two,.gridcards,.capgrid,.knobs{grid-template-columns:1fr}.arch{grid-template-columns:repeat(2,1fr)}.readout{grid-template-columns:repeat(2,1fr)}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+</style></head><body>
+<header class="top"><div class="top-in"><a class="brand" href="#top"><div class="brandmark">N</div><div><strong>NEOS</strong><span>Neighbourhood Energy Operating System</span></div></a><nav class="topnav"><a href="#control">Control</a><a href="#intelligence">AI & Forecasting</a><a href="#evidenceSection">Evidence</a><a href="#architecture">Architecture</a><a href="#kits">Three Kits</a></nav><div class="status"><span class="dot"></span><span id="topStatus">Research backend online</span></div></div></header>
+<div class="wrap" id="top">
+<section class="hero"><div class="heroMain"><div class="eyebrow">● Final Candidate 1.0 · Research Prototype</div><h1>Make the neighbourhood flexible — without making people change their lives.</h1><p>NEOS coordinates EVs, rooftop solar, batteries and flexible loads around a distribution transformer. Forecast uncertainty is carried into optimisation, every proposed action is projected through a safety layer, and the final action is verified against an unbalanced AC digital twin.</p><div class="heroActions"><a class="btn primary" href="#control">Open live control room →</a><a class="btn" href="#evidenceSection">Explore evidence</a><a class="btn" href="#architecture">See how NEOS works</a></div></div><div class="heroSide"><h3>Live platform status</h3><div class="big" id="heroBackend">ONLINE</div><div class="small">FastAPI · OpenDSS · simulation / research boundary</div><div class="mini"><div><b id="heroHomes">300</b><span>homes</span></div><div><b id="heroTx">630</b><span>kVA transformer</span></div><div><b id="heroEV">60</b><span>EVs</span></div><div><b id="heroPV">781</b><span>kWp rooftop PV</span></div></div></div></section>
+<div class="kpis"><div class="kpi green"><div class="v" id="kHomes">300</div><div class="l">Homes</div></div><div class="kpi"><div class="v" id="kEV">60</div><div class="l">Electric vehicles</div></div><div class="kpi"><div class="v" id="kBatt">26</div><div class="l">Home batteries</div></div><div class="kpi"><div class="v" id="kComm">10</div><div class="l">Commercial sites</div></div><div class="kpi"><div class="v" id="kNodes">40</div><div class="l">Network nodes</div></div><div class="kpi green"><div class="v" id="kHead">535</div><div class="l">kW import headroom</div></div></div>
+<div class="sectionLabel" id="control">CONTROL ROOM</div><div class="rail" id="rail" role="group" aria-label="Scenario"></div>
+<section class="panel" id="livePanel"><div class="ptitle"><h2>Live 96-step control loop</h2><span id="liveClock">idle</span></div><p class="note">One simulated step every 15 minutes. NEOS forecasts, optimises, applies the safety projection, and checks the resulting network state. The live stream is computed by the deployed backend.</p><div class="switchbar"><button class="chip" id="runCo">Run coordinated</button><button class="chip" id="runUn">Run without coordination</button><button class="chip" id="runStop" disabled>Stop</button><span class="legend"><span id="liveMode"></span></span></div><div id="liveReadout" class="readout"></div><div id="liveChart"></div></section>
+<section class="panel"><div class="ptitle"><h2>Scenario performance</h2><span>select a scenario above</span></div><div class="ptitle"><h2 id="scTitle"></h2><span id="scDesc"></span></div><div class="legend"><span style="color:var(--bad)"><i></i>No coordination</span><span style="color:var(--green)"><i></i>NEOS coordinated</span><span style="color:var(--muted)"><i class="dash"></i>Transformer rating</span></div><div id="heroChart"></div></section>
+<div class="two"><section class="panel"><div class="ptitle"><h2>What NEOS did</h2><span>controller explanation</span></div><div id="verdict"></div></section><section class="panel"><div class="ptitle"><h2>Measured outcome</h2><span>24-hour simulated window</span></div><div class="scroll"><table class="metrics" id="metrics"></table></div></section></div>
+<section class="panel"><div class="ptitle"><h2>Where flexibility came from</h2><span>coordinated run</span></div><p class="note">Flexibility is sourced from resources whose operating limits and user requirements are represented in the simulator — not from simply switching people off.</p><div class="legend"><span style="color:var(--solar)"><i></i>Rooftop solar</span><span style="color:var(--ev)"><i></i>EV charging</span><span style="color:var(--store)"><i></i>Storage</span><span><i></i>Deferrable loads</span></div><div id="flexChart"></div></section>
+<section class="panel"><div class="ptitle"><h2>Feeder voltage safety</h2><span>worst LV node · 0.94 pu floor shown</span></div><p class="note">Transformer loading is not the only constraint. NEOS checks phase-resolved voltage and line limits through the grid model before accepting an action.</p><div id="voltChart"></div></section>
+<section class="panel"><div class="ptitle"><h2>What the controller knows about the future</h2><span>probabilistic day-ahead forecast</span></div><p class="note">NEOS carries P10/P50/P90 demand and solar uncertainty into the decision process rather than pretending the future is a single number.</p><div id="fcChart"></div></section>
+<div class="sectionLabel" id="intelligence">AI · FORECASTING · OPTIMISATION</div>
+<section class="panel"><div class="ptitle"><h2>Forecast model benchmark</h2><span>chronological hold-out</span></div><p class="note">Baselines are compared with quantile gradient boosting and lead-bucketed conformal calibration. Coverage is measured on unseen data; it is not assumed.</p><div class="scroll"><table class="fc" id="fcTable"></table></div></section>
+<section class="panel"><div class="ptitle"><h2>Decision intelligence stack</h2><span>from uncertainty to a verified action</span></div><div class="arch"><div class="core"><strong>1 · Sense</strong><span>Telemetry, resources, phase state</span></div><div class="core"><strong>2 · Forecast</strong><span>Causal probabilistic demand + solar</span></div><div class="core"><strong>3 · Flexibility</strong><span>EV, battery, load and reserve envelope</span></div><div class="core"><strong>4 · Optimise</strong><span>LP / MILP / MPC scheduling</span></div><div class="core"><strong>5 · Safety project</strong><span>Resource-level projection and constraints</span></div><div class="core"><strong>6 · Verify</strong><span>Unbalanced AC OpenDSS re-solve</span></div></div><div class="architectureNote"><b>Decision Trace:</b> each control step can record the stress detected, P10/P50/P90 forecast, proposed actions, safety interventions, final transformer loading, voltage, verification status and a human-readable reason. Statuses remain <b>VERIFIED</b>, <b>INFEASIBLE</b> or <b>SOLVER_FAILED</b>.</div></section>
+<section class="panel"><div class="ptitle"><h2>Research controls and optimisation details</h2><span>what is actually inside the engine</span></div><div class="gridcards"><div class="infoCard"><span class="tag">Forecasting</span><h3>Uncertainty-aware prediction</h3><p>Causal demand forecasting, P10/P50/P90 distributions, issue-time synthetic weather, conformal calibration, forecast benchmarking and an EV information barrier.</p></div><div class="infoCard"><span class="tag">Optimisation</span><h3>Constraint-aware scheduling</h3><p>Battery, EV and deferrable-load scheduling with hard EV requirements, device power/energy bounds, exact energy accounting and replanning.</p></div><div class="infoCard"><span class="tag">Safety</span><h3>Physics before action</h3><p>Transformer loading, phase-resolved voltage, line ampacity, convergence/finiteness checks, import/export direction handling and final-action AC re-solving.</p></div><div class="infoCard"><span class="tag">Flexibility</span><h3>Flexibility Envelope</h3><p>Estimates transformer headroom, forecast uncertainty, EV flexibility, battery flexibility, deferrable-load flexibility, protected reserve, duration and confidence.</p></div><div class="infoCard"><span class="tag">Reserve</span><h3>Protected resilience</h3><p>Reserve floor, uncertainty-aware reserve logic, reserve-aware flexibility and outage/resilience state are integrated into the architecture.</p></div><div class="infoCard"><span class="tag">Audit</span><h3>Reproducible evidence</h3><p>Paired experiments, multiple replicates, 95% confidence intervals, held-out neighbourhood populations, digital-twin calibration, energy audit and SHA-256 provenance.</p></div></div></section>
+<div class="sectionLabel" id="evidenceSection">EVIDENCE · PROVENANCE · LIMITS</div>
+<section class="panel"><div class="ptitle"><h2>Evidence, not a single run</h2><span>paired · multi-seed · held-out</span></div><div class="evidenceCallout"><strong>Evidence boundary:</strong> quantitative performance claims remain anchored to the OpenDSS-generated research evidence. Broader operating-system modules are clearly labelled as implemented software, simulation modules, concepts or roadmap items.</div><div id="evidence"></div></section>
+<section class="panel"><div class="ptitle"><h2>What the system does — and does not — claim</h2><span>research integrity</span></div><div class="gridcards"><div class="infoCard"><span class="tag">Verified core</span><h3>Urban / suburban feeder</h3><p>Strongest quantitatively validated part of NEOS: OpenDSS-verified feeder simulations covering evening transformer overload, EV surge and PV variability.</p></div><div class="infoCard"><span class="tag partial">Simulation module</span><h3>Low-income / peri-urban</h3><p>Community Energy Hub, shared battery, essential-service prioritisation, outage/resilience and affordability/service concepts. Evidence is not yet equivalent to the urban benchmark.</p></div><div class="infoCard"><span class="tag partial">Simulation module</span><h3>Rural</h3><p>Shared solar, battery, pumps, water, thermal/cold storage, productive loads, public lighting, priority tiers and surplus routing. Benchmark validation is pending.</p></div><div class="infoCard"><span class="tag concept">Concept only</span><h3>Islanding</h3><p>Simulation/concept state machine only. This is not a certified protection design or public-feeder islanding claim.</p></div><div class="infoCard"><span class="tag concept">Not implemented</span><h3>Hardware control</h3><p>No physical actuator control, hardware-in-the-loop, real-feeder deployment or DISCOM approval is claimed.</p></div><div class="infoCard"><span class="tag">Safety boundary</span><h3>Flexibility is not a guarantee</h3><p>The flexibility envelope represents estimated available flexibility, not a contractual delivery guarantee.</p></div></div></section>
+<div class="sectionLabel" id="kits">THREE-KIT OPERATING SYSTEM</div>
+<section class="panel"><div class="ptitle"><h2>NEOS adapts to neighbourhood context</h2><span>one operating architecture · different resource mixes</span></div><div class="gridcards"><div class="infoCard"><span class="tag">Kit 1 · Implemented</span><h3>Urban / Suburban</h3><p><b>Focus:</b> EV, PV, home batteries and flexible loads.<br><b>Resources:</b> rooftop PV, EV charging, home batteries, flexible heating/loads and community battery abstraction.<br><b>Primary evidence:</b> OpenDSS-verified urban feeder results.</p></div><div class="infoCard"><span class="tag partial">Kit 2 · Partial</span><h3>Low-income / Peri-urban</h3><p><b>Focus:</b> community energy hub and essential-service resilience.<br><b>Resources:</b> shared battery, priority loads, outage logic, load-limited island concept, offline participation and affordability/service concepts.</p></div><div class="infoCard"><span class="tag partial">Kit 3 · Partial</span><h3>Rural</h3><p><b>Focus:</b> shared solar, battery, pumps, water and thermal/cold storage.<br><b>Resources:</b> productive loads, public lighting, priority tiers, rural scheduling and surplus routing.</p></div></div></section>
+<section class="panel" id="platformPanel"><div class="ptitle"><h2>Platform capability map</h2><span>live manifest from the deployed backend</span></div><div id="platformCaps" class="capgrid"></div></section>
+<section class="panel"><div class="ptitle"><h2>Operating-system modules</h2><span>supporting layers in Final Candidate 1.0</span></div><div class="gridcards"><div class="infoCard"><h3>Resources & telemetry</h3><p>Batteries · EVs · pumps · tanks · thermal/cold storage · telemetry · phase-aware monitoring.</p></div><div class="infoCard"><h3>Resilience</h3><p>Reserve · offline continuity · outage support · community energy hub · load prioritisation.</p></div><div class="infoCard"><h3>Grid interface</h3><p>DISCOM request layer · flexibility interface · verification ledger · provenance and claims management.</p></div><div class="infoCard"><h3>Rural scheduling</h3><p>Priority tiers, pumps, water storage, productive loads, public lighting and surplus routing.</p></div><div class="infoCard"><h3>Evidence layer</h3><p>Evidence tags, source hashes, seeds, configuration, software version and research boundary.</p></div><div class="infoCard"><h3>Future roadmap</h3><p>Stress-test laboratory, communications-loss testing, forecast-failure robustness, battery derating, adaptive reserve study and broader web exposure remain roadmap work.</p></div></div></section>
+<div class="sectionLabel" id="architecture">SYSTEM ARCHITECTURE</div>
+<section class="panel"><div class="ptitle"><h2>NEOS control architecture</h2><span>Forecast → Optimise → Physics-Verify → Dispatch → Measure → Explain</span></div><div class="arch"><div><strong>Forecast</strong><span>Demand + solar distributions, P10/P50/P90, uncertainty.</span></div><div><strong>Optimise</strong><span>MPC / LP / MILP schedules flexible resources.</span></div><div><strong>Safety</strong><span>Projection, reserve, voltage, line and transformer constraints.</span></div><div><strong>OpenDSS</strong><span>Unbalanced AC digital twin verifies proposed actions.</span></div><div><strong>Dispatch</strong><span>Simulation-only resource setpoints within accepted limits.</span></div><div><strong>Explain</strong><span>Decision trace, evidence tags and human-readable rationale.</span></div></div><div class="architectureNote">The deployed boundary is <b>simulation / research prototype</b>. There is no physical actuator control. The backend exposes REST/JSON and server-sent event simulation endpoints through FastAPI.</div></section>
+<section class="panel"><div class="ptitle"><h2>Deployment & reproducibility</h2><span>live environment</span></div><div class="statusGrid"><div class="statusBox"><div class="label">Backend</div><b id="deployBackend">Render · FastAPI</b></div><div class="statusBox"><div class="label">Grid engine</div><b id="deployGrid">OpenDSSDirect 0.9.4</b></div><div class="statusBox"><div class="label">Version</div><b>Final Candidate 1.0-research</b></div><div class="statusBox"><div class="label">Frontend</div><b>Static web · Vercel-ready</b></div></div><p class="note" style="margin-top:14px">The service reports its runtime provenance through the health endpoint, including Python, NumPy, SciPy, scikit-learn, OpenDSSDirect and source SHA-256 information.</p><div class="monoBlock">NEOS pipeline: Sense → Forecast → Flexibility Envelope → Optimise → Safety Projection → OpenDSS Verification → Decision Trace → Measure → Explain</div></section>
+<section class="panel"><div class="ptitle"><h2>How a decision is made</h2><span>control loop</span></div><div id="pipe"></div></section>
+<p class="foot" id="foot"></p></div>
 <script>
 
 const DT = 0.25, T0 = 12;            // window starts at 12:00
@@ -568,9 +363,23 @@ const SCENARIO_ICON = {normal:"\u2600\uFE0F",cloud:"\u2601\uFE0F",heat:"\uD83D\u
   evsurge:"\uD83D\uDE97",shortage:"\u26A1",battfail:"\uD83D\uDD0B",spike:"\uD83D\uDCC8"};
 
 /* ---------- bootstrap ---------- */
+async function renderPlatformStatus(){
+  try{
+    const p=await j("/api/platform");
+    const caps=p.capabilities||{};
+    const el=$("#platformCaps");
+    el.innerHTML=Object.entries(caps).map(([k,v])=>{
+      const cls=(String(v).includes("simulation")||String(v).includes("stage1"))?"partial":(String(v).includes("not_implemented")?"no":"");
+      return `<div class="cap ${cls}"><b>${k.replaceAll("_"," ")}</b><span>${v}</span></div>`;
+    }).join("");
+    $("#topStatus").textContent="Research backend online · OpenDSS verified";
+  }catch(e){$("#topStatus").textContent="Backend unavailable";}
+}
+
 async function boot(){
   D.meta = await j("/api/meta?"+qs());
   renderPlate();
+  renderPlatformStatus();
   const cat = await j("/api/scenarios");
   cat.forEach(s => D.scenarios[s.key] = {title:(SCENARIO_ICON[s.key]||"")+" "+s.title, desc:s.description});
   renderRail(); renderKnobs();
@@ -696,6 +505,8 @@ $("#runStop").onclick=liveStop;
 
 function renderPlate(){
   const m=D.meta;
+  $("#kHomes").textContent=m.homes; $("#kEV").textContent=m.evs; $("#kBatt").textContent=m.batteries; $("#kComm").textContent=m.commercial; $("#kNodes").textContent=m.nodes; $("#kHead").textContent=fmt(m.import_headroom_kw,0);
+  $("#heroHomes").textContent=m.homes; $("#heroTx").textContent=fmt(m.tx_kva,0); $("#heroEV").textContent=m.evs; $("#heroPV").textContent=fmt(m.pv_kwp,0);
   $("#plate").innerHTML=
     `<div><span>Homes</span><b>${m.homes}</b></div>`+
     `<div><span>Rooftop solar</span><b>${fmt(m.pv_kwp,0)} kWp</b></div>`+
@@ -714,6 +525,4 @@ function renderPlate(){
 let rt; addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>select(current,false),200)});
 boot().catch(e=>{ document.querySelector(".wrap").insertAdjacentHTML("afterbegin",
   `<p class="loading">Backend not reachable (${e.message}). Start it with <code>uvicorn server:app --port 8000</code>, or open static-demo.html.</p>`); });
-</script>
-</body>
-</html>
+</script></body></html>
