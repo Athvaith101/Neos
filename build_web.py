@@ -47,7 +47,7 @@ EXTRA_CSS = """
 """
 
 BOOT = r"""
-const API = "";
+const API = (location.hostname === "localhost" || location.hostname === "127.0.0.1") ? "" : "https://neos-arpj.onrender.com";
 let P = {n_homes:300, n_ev:60, n_pv:150, n_bess:26, tx_kva:630};
 const D = {meta:null, forecast_benchmark:null, pv_calibration:null, scenarios:{}, study:null};
 const qs = () => new URLSearchParams(P).toString();
