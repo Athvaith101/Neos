@@ -18,7 +18,7 @@ import unittest
 from fastapi.testclient import TestClient
 from server import app
 
-SMALL_Q = dict(n_homes=60, n_ev=14, n_pv=30, n_bess=6, tx_kva=200.0, backend='reference')
+SMALL_Q = dict(n_homes=60, n_ev=14, n_pv=30, n_bess=6, n_comm=3, tx_kva=200.0, backend='reference')
 # Pinned to the reference backend deliberately: this file tests API routing,
 # validation and serialisation, which is backend-agnostic by design (the
 # service layer dispatches to whichever backend the config names). OpenDSS
@@ -101,6 +101,17 @@ class TestDecisionTraceEndpoint(unittest.TestCase):
         r = self.c.get('/api/decision_trace',
                        params=dict(scenario='heat', mode='coordinated', status='bogus', **SMALL_Q))
         self.assertEqual(r.status_code, 400)
+
+
+class TestStreamEndpoint(unittest.TestCase):
+    def test_stream_emits_progress_and_completion(self):
+        c = TestClient(app)
+        r = c.get('/api/stream', params=dict(scenario='normal', mode='uncoordinated',
+                                             delay=0, **SMALL_Q))
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('text/event-stream', r.headers.get('content-type', ''))
+        self.assertIn('"done": true', r.text)
+        self.assertNotIn('"error"', r.text)
 
 
 if __name__ == '__main__':
