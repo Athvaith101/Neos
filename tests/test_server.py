@@ -125,6 +125,11 @@ class TestFrontendPageRoutes(unittest.TestCase):
                 self.assertEqual(r.status_code, 200)
                 self.assertIn('data-page="' + page + '"', r.text)
 
+    def test_home_page_selects_overview_view(self):
+        r = self.c.get('/')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('data-page="overview"', r.text)
+
     def test_shared_frontend_assets_are_served(self):
         self.assertEqual(self.c.get('/neos.css').status_code, 200)
         self.assertEqual(self.c.get('/neos.js').status_code, 200)
