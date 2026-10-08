@@ -31,7 +31,7 @@ Endpoints
     GET  /                                   operator console
 """
 from __future__ import annotations
-import asyncio, json, os, queue, threading
+import asyncio, json, os, queue, threading, time
 from pathlib import Path
 
 from fastapi import FastAPI, Query, Header, HTTPException
@@ -156,6 +156,8 @@ async def stream(scenario: str = "normal", mode: str = "coordinated", rep: int =
     check(scenario, mode)
     cfg = cfg_from(n_homes, n_ev, n_pv, n_bess, n_comm, tx_kva, backend)
     q: "queue.Queue" = queue.Queue()
+    started_at = time.monotonic()
+    q.put({"stage": "preparing", "message": "Preparing neighborhood data and forecast model."})
 
     def worker():
         try:
@@ -168,13 +170,24 @@ async def stream(scenario: str = "normal", mode: str = "coordinated", rep: int =
     threading.Thread(target=worker, daemon=True).start()
 
     async def gen():
-        loop = asyncio.get_running_loop()
+        last_heartbeat = asyncio.get_running_loop().time()
         while True:
-            item = await loop.run_in_executor(None, q.get)
+            try:
+                item = q.get_nowait()
+            except queue.Empty:
+                now = asyncio.get_running_loop().time()
+                if now - last_heartbeat >= 10:
+                    elapsed = int(time.monotonic() - started_at)
+                    item = {"stage": "working", "message":
+                            f"Still preparing the simulation ({elapsed}s). The first run builds its forecast model."}
+                    last_heartbeat = now
+                else:
+                    await asyncio.sleep(0.25)
+                    continue
             if item is None:
                 break
             yield f"data: {json.dumps(item, default=float)}\n\n"
-            if not item.get("done") and delay:
+            if not item.get("done") and not item.get("stage") and delay:
                 await asyncio.sleep(delay)
 
     return StreamingResponse(gen(), media_type="text/event-stream",
