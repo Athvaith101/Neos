@@ -114,5 +114,20 @@ class TestStreamEndpoint(unittest.TestCase):
         self.assertNotIn('"error"', r.text)
 
 
+class TestFrontendPageRoutes(unittest.TestCase):
+    def setUp(self):
+        self.c = TestClient(app)
+
+    def test_each_operator_area_has_a_separate_page(self):
+        for page in ('grid', 'community', 'rural', 'utility', 'evidence'):
+            with self.subTest(page=page):
+                r = self.c.get('/' + page + '.html')
+                self.assertEqual(r.status_code, 200)
+                self.assertIn('data-page="' + page + '"', r.text)
+
+    def test_unknown_frontend_page_is_not_served(self):
+        self.assertEqual(self.c.get('/not-a-page.html').status_code, 404)
+
+
 if __name__ == '__main__':
     unittest.main()
