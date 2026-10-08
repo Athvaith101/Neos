@@ -149,9 +149,10 @@ def compare(scenario: str = "normal", rep: int = 0, n_homes: int = 300, n_ev: in
 @app.get("/api/stream")
 async def stream(scenario: str = "normal", mode: str = "coordinated", rep: int = 0,
                  n_homes: int = 300, n_ev: int = 60, n_pv: int = 150, n_bess: int = 26,
-                 tx_kva: float = 630.0, delay: float = 0.06):
+                 n_comm: int = 10, tx_kva: float = 630.0, backend: str = "auto",
+                 delay: float = 0.06):
     check(scenario, mode)
-    cfg = cfg_from(n_homes, n_ev, n_pv, n_bess, n_comm, tx_kva)
+    cfg = cfg_from(n_homes, n_ev, n_pv, n_bess, n_comm, tx_kva, backend)
     q: "queue.Queue" = queue.Queue()
 
     def worker():
@@ -181,7 +182,7 @@ async def stream(scenario: str = "normal", mode: str = "coordinated", rep: int =
 @app.get("/api/flexibility")
 def flexibility(scenario: str = "normal", mode: str = "coordinated", rep: int = 0,
                 n_homes: int = 300, n_ev: int = 60, n_pv: int = 150, n_bess: int = 26,
-                tx_kva: float = 630.0, backend: str = "auto"):
+                n_comm: int = 10, tx_kva: float = 630.0, backend: str = "auto"):
     """The Flexibility Envelope, one record per control step (V3 roadmap
     section 5). Every record's `status` field is the literal string
     "ESTIMATED" -- see neos/flexibility.py for why this is enforced in code,
@@ -198,7 +199,7 @@ def flexibility(scenario: str = "normal", mode: str = "coordinated", rep: int = 
 @app.get("/api/decision_trace")
 def decision_trace(scenario: str = "normal", mode: str = "coordinated", rep: int = 0,
                    n_homes: int = 300, n_ev: int = 60, n_pv: int = 150, n_bess: int = 26,
-                   tx_kva: float = 630.0, backend: str = "auto", status: str = None):
+                   n_comm: int = 10, tx_kva: float = 630.0, backend: str = "auto", status: str = None):
     """The Decision Trace, one record per control step (V3 roadmap section
     6). `status` (optional) filters to VERIFIED / INFEASIBLE / SOLVER_FAILED,
     exactly as reported -- never collapsed into a generic ok/not-ok flag, in
