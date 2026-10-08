@@ -1,272 +1,112 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Neighbourhood Energy OS — operator console</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-:root{
-  --paper:#F5FAF6; --panel:#FFFFFF; --rule:#D0DFD5; --rule-soft:#E7EFE9;
-  --ink:#193629; --ink-2:#53675B; --ink-3:#84978B;
-  --ok:#2F8B57; --warn:#8E6A27; --bad:#A8493B;
-  --solar:#6FAE82; --store:#26764C; --ev:#4B9A67; --grid:#193629;
-  --plot:#FFFFFF; --shadow:0 2px 10px rgba(28,88,53,.06);
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --paper:#0E1B14; --panel:#15251B; --rule:#2A4032; --rule-soft:#203428;
-    --ink:#E5F0E8; --ink-2:#AEC0B2; --ink-3:#84978B;
-    --ok:#58B77A; --warn:#D0A24C; --bad:#DE7869;
-    --solar:#76C48B; --store:#51A875; --ev:#88B987; --grid:#E5F0E8;
-    --plot:#112117; --shadow:none;
-  }
-}
-:root[data-theme="dark"]{
-  --paper:#0E1B14; --panel:#15251B; --rule:#2A4032; --rule-soft:#203428;
-  --ink:#E5F0E8; --ink-2:#AEC0B2; --ink-3:#84978B;
-  --ok:#58B77A; --warn:#D0A24C; --bad:#DE7869;
-  --solar:#76C48B; --store:#51A875; --ev:#88B987; --grid:#E5F0E8;
-  --plot:#112117; --shadow:none;
-}
-*{box-sizing:border-box}
-body{margin:0;background:var(--paper);color:var(--ink);
-  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
-  font-size:15.5px;line-height:1.55;-webkit-font-smoothing:antialiased;
-  font-variant-numeric:tabular-nums lining-nums}
-.wrap{max-width:1080px;margin:0 auto;padding:0 20px 72px}
-h1,h2,h3{font-weight:600;letter-spacing:-0.012em;margin:0}
-a{color:inherit}
-.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+﻿<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NEOS — Neighbourhood Energy Operating System</title><style>
+:root{--bg:#F5FAF6;--card:#FFFFFF;--green:#2F8B57;--green2:#216A43;--mint:#E7F3EA;--mint2:#F2F8F3;--ink:#193629;--muted:#53675B;--line:#D0DFD5;--soft:#E7EFE9;--warn:#8E6A27;--bad:#A8493B;--solar:#6FAE82;--store:#26764C;--ev:#4B9A67;--shadow:0 10px 35px rgba(28,88,53,.08)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:linear-gradient(180deg,#f8fcf9 0,#f1f8f4 100%);color:var(--ink);font:15px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}button,input{font:inherit}a{color:inherit;text-decoration:none}.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.top{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}.top-in{max-width:1280px;margin:auto;padding:14px 28px;display:flex;align-items:center;justify-content:space-between;gap:24px}.brand{display:flex;align-items:center;gap:12px}.brandmark{width:42px;height:42px;border-radius:12px;background:var(--green);display:grid;place-items:center;color:white;font-weight:800;letter-spacing:-1px;box-shadow:0 7px 18px rgba(22,131,79,.2)}.brand strong{font-size:18px;display:block;letter-spacing:-.02em}.brand span{font-size:11px;color:var(--muted);letter-spacing:.09em;text-transform:uppercase}.topnav{display:flex;gap:5px;flex-wrap:wrap}.topnav a{padding:7px 10px;border-radius:8px;color:var(--muted);font-size:13px}.topnav a:hover{background:var(--mint);color:var(--green2)}.brandMini{width:28px;height:28px;display:grid;place-items:center;color:var(--green);margin-left:auto;flex:0 0 auto}.brandMini svg{width:26px;height:26px;display:block}.top{scroll-margin-top:80px}#control,#kits,#lab,#utility,#trace,#evidenceSection,#intelligence,#architecture{scroll-margin-top:92px}.status{display:flex;align-items:center;gap:8px;border:1px solid #cce7d7;background:var(--mint2);padding:7px 10px;border-radius:999px;color:var(--green2);font-size:12px;white-space:nowrap}.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 4px #d9f0e2}
+.wrap{max-width:1280px;margin:auto;padding:30px 28px 80px}.hero{display:grid;grid-template-columns:1.45fr .75fr;gap:24px;align-items:stretch;margin:8px 0 22px}.heroMain,.heroSide,.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}.heroMain{padding:34px}.eyebrow{display:inline-flex;gap:7px;align-items:center;color:var(--green);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.12em}.hero h1{font-size:clamp(34px,5vw,62px);line-height:.98;letter-spacing:-.055em;margin:14px 0 16px;max-width:850px}.hero p{color:var(--muted);font-size:16px;max-width:760px;margin:0}.heroActions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}.btn{border:1px solid var(--line);background:white;color:var(--ink);border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:650}.btn.primary{background:var(--green);border-color:var(--green);color:#fff}.btn:hover{transform:translateY(-1px)}.heroSide{padding:22px;background:linear-gradient(145deg,#fff,#eef9f2)}.heroSide h3{margin:0 0 14px;font-size:14px}.heroSide .big{font-size:42px;font-weight:800;letter-spacing:-.05em;color:var(--green)}.heroSide .small{color:var(--muted);font-size:12px}.mini{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:18px}.mini div{padding:10px;background:#fff;border:1px solid var(--line);border-radius:10px}.mini b{display:block;font-size:18px}.mini span{font-size:11px;color:var(--muted)}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:0 0 22px}.kpi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 15px;box-shadow:0 5px 18px rgba(19,75,47,.045)}.kpi .v{font-size:23px;font-weight:800;letter-spacing:-.035em}.kpi .l{font-size:11px;color:var(--muted);margin-top:2px}.kpi.green .v{color:var(--green)}
+.rail{display:flex;gap:8px;overflow-x:auto;padding:3px 1px 14px;scrollbar-width:thin}.chip{flex:0 0 auto;border:1px solid var(--line);background:#fff;color:var(--muted);padding:8px 13px;font-size:13px;cursor:pointer;border-radius:999px}.chip:hover{border-color:#9ccbad;color:var(--green2)}.chip[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:white}.chip:disabled{opacity:.45;cursor:default}
+.panel{padding:22px;margin-top:16px}.ptitle{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:5px}.ptitle h2{font-size:19px;letter-spacing:-.025em;margin:0}.ptitle span{font-size:11px;color:var(--muted)}.note{color:var(--muted);font-size:13px;max-width:900px;margin:3px 0 16px}.sectionLabel{margin:34px 2px 8px;font-size:12px;font-weight:800;color:var(--green2);letter-spacing:.13em;text-transform:uppercase}.two{display:grid;grid-template-columns:.72fr 1.28fr;gap:16px;margin-top:16px}.switchbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:5px 0 12px}.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted)}.legend i{display:inline-block;width:20px;height:2px;vertical-align:middle;margin-right:6px}.legend i.dash{height:0;border-top:2px dashed currentColor}svg{display:block;width:100%;height:auto;overflow:visible}.axis{stroke:var(--line);stroke-width:1}.gridline{stroke:#e9f1ec;stroke-width:1}.tick{fill:#789086;font-size:10.5px}.alab{fill:var(--muted);font-size:11px}
+.readout{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:14px}.readout div{background:#fbfefc;padding:11px 13px}.readout span{display:block;color:var(--muted);font-size:10px}.readout b{font-size:19px;font-weight:750}.knobs{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.knob label{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:6px}.knob label b{color:var(--ink)}.knob input{width:100%;accent-color:var(--green)}
+table.metrics,table.fc{width:100%;border-collapse:collapse;font-size:12.5px}table.metrics th,table.metrics td,table.fc th,table.fc td{padding:9px 8px;border-bottom:1px solid #e8f0eb;text-align:right}table.metrics th:first-child,table.metrics td:first-child,table.fc th:first-child,table.fc td:first-child{text-align:left}table.metrics th,table.fc th{font-size:11px;color:#789086;font-weight:650}table.metrics td:first-child{color:var(--muted)}.delta{font-weight:750}.delta.good,.hit{color:var(--green)}.delta.bad,.miss{color:var(--bad)}.delta.flat{color:#82938b}.scroll{overflow-x:auto}.hl td{background:#eff9f3;font-weight:600}.lim{margin:6px 0 0 18px;padding:0;color:var(--muted);font-size:13px}.lim li{margin:5px 0}
+.gridcards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.infoCard{border:1px solid var(--line);border-radius:14px;padding:16px;background:linear-gradient(145deg,#fff,#f8fcf9)}.infoCard h3{font-size:15px;margin:0 0 7px}.infoCard p{font-size:12.5px;color:var(--muted);margin:0}.tag{display:inline-block;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;background:var(--mint);color:var(--green2);margin-bottom:10px}.tag.partial{background:#fff6df;color:#8b6218}.tag.concept{background:#f0f2f2;color:#607069}.capgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.cap{padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:#fff;display:flex;justify-content:space-between;gap:10px;align-items:center}.cap b{font-size:12px}.cap span{font-size:10px;font-weight:800;color:var(--green)}.cap.partial span{color:var(--warn)}.cap.no span{color:var(--muted)}
+.arch{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}.arch div{position:relative;padding:15px 11px;border:1px solid var(--line);border-radius:12px;background:#fbfefc;min-height:92px}.arch strong{display:block;font-size:12px;margin-bottom:6px}.arch span{font-size:10.5px;color:var(--muted)}.arch .core{border-color:#9dd1b2;background:var(--mint2)}.architectureNote{margin-top:10px;padding:12px 14px;border-radius:11px;background:#f6faf7;color:var(--muted);font-size:12px;border-left:3px solid var(--green)}
+.statusGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.statusBox{padding:13px;border:1px solid var(--line);border-radius:12px;background:#fbfefc}.statusBox .label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}.statusBox b{display:block;margin-top:3px;font-size:13px}.foot{margin-top:30px;padding:18px 4px 0;border-top:1px solid var(--line);color:#70847b;font-size:12px}.loading{padding:12px;border:1px solid #f0d39a;background:#fff8e8;color:#7b5b20;border-radius:10px}.monoBlock{background:#10231a;color:#dcefe4;border-radius:12px;padding:13px;overflow:auto;font:11px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace}.evidenceCallout{padding:15px;border-radius:13px;background:#edf8f1;border:1px solid #c9e7d4;margin-bottom:14px}.evidenceCallout strong{color:var(--green2)}
+@media(max-width:1050px){.hero{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(3,1fr)}.arch{grid-template-columns:repeat(3,1fr)}.capgrid,.gridcards{grid-template-columns:repeat(2,1fr)}}@media(max-width:760px){.top-in{padding:12px 16px;flex-wrap:wrap}.topnav{display:flex;order:3;width:100%;overflow-x:auto;flex-wrap:nowrap;white-space:nowrap}.topnav a{flex:0 0 auto}.wrap{padding:20px 15px 60px}.heroMain{padding:24px}.hero h1{font-size:42px}.kpis{grid-template-columns:repeat(2,1fr)}.two,.gridcards,.capgrid,.knobs{grid-template-columns:1fr}.arch{grid-template-columns:repeat(2,1fr)}.readout{grid-template-columns:repeat(2,1fr)}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
 
-/* ---------- masthead ---------- */
-header.top{border-bottom:1px solid var(--rule);margin-bottom:26px}
-.top-in{max-width:1080px;margin:0 auto;padding:30px 20px 22px;
-  display:flex;flex-wrap:wrap;gap:22px;align-items:flex-end;justify-content:space-between}
-h1{font-size:clamp(26px,4.4vw,38px);line-height:1.08;max-width:15ch}
-.sub{color:var(--ink-2);margin-top:9px;max-width:56ch;font-size:15px}
-.plate{border:1px solid var(--rule);background:var(--panel);padding:11px 14px;
-  display:grid;grid-template-columns:repeat(2,auto);gap:3px 20px;font-size:13px}
-.plate div{display:flex;gap:8px;justify-content:space-between;color:var(--ink-2)}
-.plate b{font-weight:500;color:var(--ink)}
+.controlLab{background:linear-gradient(180deg,#fff,#f7fcf9)}.knobs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.knob{border:1px solid var(--line);border-radius:12px;padding:13px;background:#fbfefc}.knob label{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);font-weight:650}.knob label b{color:var(--green2);font-size:15px}.knob input{width:100%;margin-top:12px;accent-color:var(--green)}.cfgActions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:15px}.cfgState{font-size:12px;color:var(--muted)}.weatherCards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.weatherCard{border:1px solid var(--line);background:#fff;border-radius:13px;padding:14px;cursor:pointer;transition:.18s}.weatherCard:hover{border-color:#99cdb0;transform:translateY(-1px)}.weatherCard.active{border-color:var(--green);box-shadow:0 0 0 2px #dff2e7;background:#f7fcf9}.weatherCard .wi{font-size:22px}.weatherCard b{display:block;margin-top:7px}.weatherCard span{display:block;color:var(--muted);font-size:11px;margin-top:3px}.runState{border:1px solid #cde7d7;background:#f2faf5;padding:9px 12px;border-radius:10px;font-size:12px;color:var(--green2)}@media(max-width:900px){.knobs{grid-template-columns:repeat(2,1fr)}.weatherCards{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.knobs,.weatherCards{grid-template-columns:1fr}}
+</style><style>
+.extraGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.extraGrid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.miniCard{border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--mint2)}.miniCard h3{margin:0 0 7px}.miniCard p{margin:0;color:var(--muted);font-size:13px}.controlRows{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.controlRows label{font-size:12px;color:var(--muted);display:block}.controlRows input,.controlRows select{width:100%;margin-top:5px;padding:9px;border:1px solid var(--line);border-radius:9px;background:white}.resultBox{margin-top:14px;border:1px solid var(--line);border-radius:12px;background:#fbfefc;padding:14px;overflow:auto;max-height:420px}.resultBox pre{white-space:pre-wrap;word-break:break-word;margin:0;font:12px/1.5 ui-monospace,Consolas,monospace}.kitTabs{display:flex;gap:8px;flex-wrap:wrap}.kitTabs .active{background:var(--green);color:white;border-color:var(--green)}.metricRow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}.metricRow div{background:white;border:1px solid var(--line);border-radius:10px;padding:10px}.metricRow small{display:block;color:var(--muted)}.metricRow b{font-size:19px}.statusPill{display:inline-block;padding:4px 8px;border-radius:999px;background:var(--mint);color:var(--green2);font-size:11px;font-weight:700}.dangerNote{border-left:3px solid var(--warn);padding:10px 12px;background:#fffaf0;color:#70521b;border-radius:8px}.endpointList{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.endpointList div{padding:9px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:12px}.endpointList b{color:var(--green2)}
+@media(max-width:900px){.extraGrid,.extraGrid.three,.controlRows,.endpointList{grid-template-columns:1fr}.metricRow{grid-template-columns:1fr 1fr}.topnav{display:none}}
+</style></head><body>
+<header class="top"><div class="top-in"><a class="brand" href="#top"><div class="brandmark">N</div><div><strong>NEOS</strong><span>Neighbourhood Energy Operating System</span></div></a><nav class="topnav"><a href="#control">Control</a><a href="#kits">Kits</a><a href="#lab">Test Lab</a><a href="#utility">DISCOM</a><a href="#trace">Trace</a><a href="#evidence">Evidence</a><a href="#control">Control</a><a href="#intelligence">AI & Forecasting</a><a href="#evidenceSection">Evidence</a><a href="#architecture">Architecture</a><a href="#kits">Three Kits</a></nav><a class="brandMini" href="#top" aria-label="NEOS home"><svg viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M16 2C8.4 2 3 7.8 3 15.4c0 7.9 5.4 13.1 12.3 13.1 7.2 0 12.7-6.1 12.7-14.1V3.7C22.8 3.4 19.1 2 16 2Zm7.2 10.1c-5.8.7-10.1 3.3-13.2 8.2l-2.1-1.4c3.4-5.5 8.4-8.5 15.3-9.4v2.6Z"/></svg></a><div class="status"><span class="dot"></span><span id="topStatus">Connecting to NEOS backend…</span></div></div></header>
+<div class="wrap" id="top">
+<section class="hero"><div class="heroMain"><div class="eyebrow">● NEOS · Neighbourhood Energy Operating System</div><h1>Make the neighbourhood flexible — without making people change their lives.</h1><p>NEOS coordinates EVs, rooftop solar, batteries and flexible loads around a distribution transformer. Forecast uncertainty is carried into optimisation, every proposed action is projected through a safety layer, and the final action is verified against an unbalanced AC digital twin.</p><div class="heroActions"><a class="btn primary" href="#control">Open live control room →</a><a class="btn" href="#evidenceSection">Explore evidence</a><a class="btn" href="#architecture">See how NEOS works</a></div></div><div class="heroSide"><h3>Live platform status</h3><div class="big" id="heroBackend">ONLINE</div><div class="small">FastAPI · OpenDSS · digital energy operating system</div><div class="mini"><div><b id="heroHomes">300</b><span>homes</span></div><div><b id="heroTx">630</b><span>kVA transformer</span></div><div><b id="heroEV">60</b><span>EVs</span></div><div><b id="heroPV">781</b><span>kWp rooftop PV</span></div></div></div></section>
+<div class="kpis"><div class="kpi green"><div class="v" id="kHomes">300</div><div class="l">Homes</div></div><div class="kpi"><div class="v" id="kEV">60</div><div class="l">Electric vehicles</div></div><div class="kpi"><div class="v" id="kBatt">26</div><div class="l">Home batteries</div></div><div class="kpi"><div class="v" id="kComm">10</div><div class="l">Commercial sites</div></div><div class="kpi"><div class="v" id="kNodes">40</div><div class="l">Network nodes</div></div><div class="kpi green"><div class="v" id="kHead">535</div><div class="l">kW import headroom</div></div></div>
+<div class="sectionLabel" id="control">CONTROL ROOM</div><div class="rail" id="rail" role="group" aria-label="Scenario"></div>
+<section class="panel controlLab" id="configuration"><div class="ptitle"><h2>Neighbourhood configuration</h2><span>change the digital neighbourhood and rebuild</span></div><p class="note">Adjust the resources and transformer size, then apply the configuration. NEOS rebuilds the simulated feeder and refreshes its forecast benchmark.</p><div id="knobs" class="knobs"></div><div class="cfgActions"><button class="btn primary" id="applyCfg">Apply configuration</button><span id="cfgState" class="cfgState">Using the default NEOS neighbourhood</span></div></section>
+<section class="panel weatherLab"><div class="ptitle"><h2>Weather & stress laboratory</h2><span>select the operating condition</span></div><p class="note">These are the implemented NEOS scenario conditions. Weather-driven cases include normal, cloud, heat and renewable-shortage conditions; the remaining cases stress EV demand, storage and network demand.</p><div id="weatherCards" class="weatherCards"></div></section>
+<section class="panel" id="livePanel"><div class="ptitle"><h2>Live 96-step control loop</h2><span id="liveClock">idle</span></div><p class="note">One simulated step every 15 minutes. NEOS forecasts, optimises, applies the safety projection, and checks the resulting network state. The live stream is computed by the deployed backend.</p><div class="switchbar"><button class="chip" id="runCo">Run coordinated</button><button class="chip" id="runUn">Run without coordination</button><button class="chip" id="runStop" disabled>Stop</button><span class="legend"><span id="liveMode"></span></span></div><div id="liveReadout" class="readout"></div><div id="liveChart"></div></section>
+<section class="panel"><div class="ptitle"><h2>Scenario performance</h2><span>select a scenario above</span></div><div class="ptitle"><h2 id="scTitle"></h2><span id="scDesc"></span></div><div class="legend"><span style="color:var(--bad)"><i></i>No coordination</span><span style="color:var(--green)"><i></i>NEOS coordinated</span><span style="color:var(--muted)"><i class="dash"></i>Transformer rating</span></div><div id="heroChart"></div></section>
+<div class="two"><section class="panel"><div class="ptitle"><h2>What NEOS did</h2><span>controller explanation</span></div><div id="verdict"></div></section><section class="panel"><div class="ptitle"><h2>Measured outcome</h2><span>24-hour simulated window</span></div><div class="scroll"><table class="metrics" id="metrics"></table></div></section></div>
+<section class="panel"><div class="ptitle"><h2>Where flexibility came from</h2><span>coordinated run</span></div><p class="note">Flexibility is sourced from resources whose operating limits and user requirements are represented in the simulator — not from simply switching people off.</p><div class="legend"><span style="color:var(--solar)"><i></i>Rooftop solar</span><span style="color:var(--ev)"><i></i>EV charging</span><span style="color:var(--store)"><i></i>Storage</span><span><i></i>Deferrable loads</span></div><div id="flexChart"></div></section>
+<section class="panel"><div class="ptitle"><h2>Feeder voltage safety</h2><span>worst LV node · 0.94 pu floor shown</span></div><p class="note">Transformer loading is not the only constraint. NEOS checks phase-resolved voltage and line limits through the grid model before accepting an action.</p><div id="voltChart"></div></section>
+<section class="panel"><div class="ptitle"><h2>What the controller knows about the future</h2><span>probabilistic day-ahead forecast</span></div><p class="note">NEOS carries P10/P50/P90 demand and solar uncertainty into the decision process rather than pretending the future is a single number.</p><div id="fcChart"></div></section>
+<div class="sectionLabel" id="intelligence">AI · FORECASTING · OPTIMISATION</div>
+<section class="panel"><div class="ptitle"><h2>Forecast model benchmark</h2><span>chronological hold-out</span></div><p class="note">Baselines are compared with quantile gradient boosting and lead-bucketed conformal calibration. Coverage is measured on unseen data; it is not assumed.</p><div class="scroll"><table class="fc" id="fcTable"></table></div></section>
+<section class="panel"><div class="ptitle"><h2>Decision intelligence stack</h2><span>from uncertainty to a verified action</span></div><div class="arch"><div class="core"><strong>1 · Sense</strong><span>Telemetry, resources, phase state</span></div><div class="core"><strong>2 · Forecast</strong><span>Causal probabilistic demand + solar</span></div><div class="core"><strong>3 · Flexibility</strong><span>EV, battery, load and reserve envelope</span></div><div class="core"><strong>4 · Optimise</strong><span>LP / MILP / MPC scheduling</span></div><div class="core"><strong>5 · Safety project</strong><span>Resource-level projection and constraints</span></div><div class="core"><strong>6 · Verify</strong><span>Unbalanced AC OpenDSS re-solve</span></div></div><div class="architectureNote"><b>Decision Trace:</b> each control step can record the stress detected, P10/P50/P90 forecast, proposed actions, safety interventions, final transformer loading, voltage, verification status and a human-readable reason. Statuses remain <b>VERIFIED</b>, <b>INFEASIBLE</b> or <b>SOLVER_FAILED</b>.</div></section>
+<section class="panel"><div class="ptitle"><h2>Research controls and optimisation details</h2><span>what is actually inside the engine</span></div><div class="gridcards"><div class="infoCard"><span class="tag">Forecasting</span><h3>Uncertainty-aware prediction</h3><p>Causal demand forecasting, P10/P50/P90 distributions, issue-time synthetic weather, conformal calibration, forecast benchmarking and an EV information barrier.</p></div><div class="infoCard"><span class="tag">Optimisation</span><h3>Constraint-aware scheduling</h3><p>Battery, EV and deferrable-load scheduling with hard EV requirements, device power/energy bounds, exact energy accounting and replanning.</p></div><div class="infoCard"><span class="tag">Safety</span><h3>Physics before action</h3><p>Transformer loading, phase-resolved voltage, line ampacity, convergence/finiteness checks, import/export direction handling and final-action AC re-solving.</p></div><div class="infoCard"><span class="tag">Flexibility</span><h3>Flexibility Envelope</h3><p>Estimates transformer headroom, forecast uncertainty, EV flexibility, battery flexibility, deferrable-load flexibility, protected reserve, duration and confidence.</p></div><div class="infoCard"><span class="tag">Reserve</span><h3>Protected resilience</h3><p>Reserve floor, uncertainty-aware reserve logic, reserve-aware flexibility and outage/resilience state are integrated into the architecture.</p></div><div class="infoCard"><span class="tag">Audit</span><h3>Reproducible evidence</h3><p>Paired experiments, multiple replicates, 95% confidence intervals, held-out neighbourhood populations, digital-twin calibration, energy audit and SHA-256 provenance.</p></div></div></section>
+<div class="sectionLabel" id="evidenceSection">EVIDENCE · PROVENANCE · LIMITS</div>
+<section class="panel"><div class="ptitle"><h2>Evidence, not a single run</h2><span>paired · multi-seed · held-out</span></div><div class="evidenceCallout"><strong>Evidence boundary:</strong> quantitative performance claims remain anchored to the OpenDSS-generated research evidence. Broader operating-system modules are clearly labelled as implemented software, simulation modules, concepts or roadmap items.</div><div id="evidence"></div></section>
+<section class="panel"><div class="ptitle"><h2>What the system does — and does not — claim</h2><span>research integrity</span></div><div class="gridcards"><div class="infoCard"><span class="tag">Verified core</span><h3>Urban / suburban feeder</h3><p>Strongest quantitatively validated part of NEOS: OpenDSS-verified feeder simulations covering evening transformer overload, EV surge and PV variability.</p></div><div class="infoCard"><span class="tag partial">Simulation module</span><h3>Low-income / peri-urban</h3><p>Community Energy Hub, shared battery, essential-service prioritisation, outage/resilience and affordability/service concepts. Evidence is not yet equivalent to the urban benchmark.</p></div><div class="infoCard"><span class="tag partial">Simulation module</span><h3>Rural</h3><p>Shared solar, battery, pumps, water, thermal/cold storage, productive loads, public lighting, priority tiers and surplus routing. Benchmark validation is pending.</p></div><div class="infoCard"><span class="tag concept">Concept only</span><h3>Islanding</h3><p>Simulation/concept state machine only. This is not a certified protection design or public-feeder islanding claim.</p></div><div class="infoCard"><span class="tag concept">Not implemented</span><h3>Hardware control</h3><p>No physical actuator control, hardware-in-the-loop, real-feeder deployment or DISCOM approval is claimed.</p></div><div class="infoCard"><span class="tag">Safety boundary</span><h3>Flexibility is not a guarantee</h3><p>The flexibility envelope represents estimated available flexibility, not a contractual delivery guarantee.</p></div></div></section>
+<div class="sectionLabel" id="kits">THREE-KIT OPERATING SYSTEM</div>
+<section class="panel"><div class="ptitle"><h2>NEOS adapts to neighbourhood context</h2><span>one operating architecture · different resource mixes</span></div><div class="gridcards"><div class="infoCard"><span class="tag">Kit 1 · Implemented</span><h3>Urban / Suburban</h3><p><b>Focus:</b> EV, PV, home batteries and flexible loads.<br><b>Resources:</b> rooftop PV, EV charging, home batteries, flexible heating/loads and community battery abstraction.<br><b>Primary evidence:</b> OpenDSS-verified urban feeder results.</p></div><div class="infoCard"><span class="tag partial">Kit 2 · Partial</span><h3>Semi-urban / Peri-urban</h3><p><b>Focus:</b> community energy hub and essential-service resilience.<br><b>Resources:</b> shared battery, priority loads, outage logic, load-limited island concept, offline participation and affordability/service concepts.</p></div><div class="infoCard"><span class="tag partial">Kit 3 · Partial</span><h3>Rural</h3><p><b>Focus:</b> shared solar, battery, pumps, water and thermal/cold storage.<br><b>Resources:</b> productive loads, public lighting, priority tiers, rural scheduling and surplus routing.</p></div></div></section>
+<section class="panel" id="platformPanel"><div class="ptitle"><h2>Platform capability map</h2><span>live manifest from the deployed backend</span></div><div id="platformCaps" class="capgrid"></div></section>
+<section class="panel"><div class="ptitle"><h2>Operating-system modules</h2><span>supporting NEOS operating layers</span></div><div class="gridcards"><div class="infoCard"><h3>Resources & telemetry</h3><p>Batteries · EVs · pumps · tanks · thermal/cold storage · telemetry · phase-aware monitoring.</p></div><div class="infoCard"><h3>Resilience</h3><p>Reserve · offline continuity · outage support · community energy hub · load prioritisation.</p></div><div class="infoCard"><h3>Grid interface</h3><p>DISCOM request layer · flexibility interface · verification ledger · provenance and claims management.</p></div><div class="infoCard"><h3>Rural scheduling</h3><p>Priority tiers, pumps, water storage, productive loads, public lighting and surplus routing.</p></div><div class="infoCard"><h3>Evidence layer</h3><p>Evidence tags, source hashes, seeds, configuration, software version and research boundary.</p></div><div class="infoCard"><h3>Future roadmap</h3><p>Stress-test laboratory, communications-loss testing, forecast-failure robustness, battery derating, adaptive reserve study and broader web exposure remain roadmap work.</p></div></div></section>
 
-.brand{display:flex;align-items:center;gap:8px;color:var(--ok);text-decoration:none;
-  font-weight:700;font-size:14px;letter-spacing:.12em;white-space:nowrap}
-.brand svg{width:28px;height:28px;display:block}
-.section-nav{position:sticky;top:0;z-index:20;display:flex;gap:6px;justify-content:center;
-  flex-wrap:wrap;padding:9px 16px;background:color-mix(in srgb,var(--panel) 94%,transparent);
-  border-bottom:1px solid var(--rule);backdrop-filter:blur(12px)}
-.section-nav a{padding:6px 12px;border-radius:999px;color:var(--ink-2);font-size:13px;
-  text-decoration:none;transition:background .16s,color .16s}
-.section-nav a:hover,.section-nav a:focus-visible{background:color-mix(in srgb,var(--ok) 12%,var(--panel));color:var(--ok)}
-#overview,#flexibility,#grid,#forecast,#evidence-page,#decisions{scroll-margin-top:74px}
-@media (max-width:600px){.section-nav{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap}}
-/* ---------- scenario rail ---------- */
-.rail{display:flex;gap:7px;overflow-x:auto;padding-bottom:6px;margin-bottom:18px}
-.chip{flex:0 0 auto;border:1px solid var(--rule);background:var(--panel);color:var(--ink-2);
-  padding:7px 13px;font:inherit;font-size:13.5px;cursor:pointer;border-radius:2px;
-  transition:background .12s,color .12s,border-color .12s}
-.chip:hover{border-color:var(--ink-3);color:var(--ink)}
-.chip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-.chip:focus-visible{outline:2px solid var(--store);outline-offset:2px}
+<div class="sectionLabel" id="control">CONTROL CENTRE</div>
+<section class="panel">
+ <div class="ptitle"><h2>Configure & test the neighbourhood</h2><span>live controls connected to the NEOS backend</span></div>
+ <p class="note">These controls change the actual simulation configuration sent to the backend. Configuration changes rebuild the digital neighbourhood; they do not change the stored evidence package.</p>
+ <div class="controlRows">
+  <label>Scenario<select id="ctlScenario"></select></label>
+  <label>Policy<select id="ctlMode"><option value="uncoordinated">No coordination</option><option value="rule_tou">Rule-based / ToU</option><option value="coordinated" selected>NEOS coordinated</option></select></label>
+  <label>Replicate<input id="ctlRep" type="number" min="0" max="99" value="0"></label>
+  <label>Homes<input id="ctlHomes" type="number" min="10" max="2000" value="300"></label>
+  <label>EVs<input id="ctlEV" type="number" min="0" max="300" value="60"></label>
+  <label>Rooftop PV installations<input id="ctlPV" type="number" min="0" max="300" value="150"></label>
+  <label>Home batteries<input id="ctlBatt" type="number" min="0" max="150" value="26"></label>
+  <label>Commercial sites<input id="ctlComm" type="number" min="0" max="60" value="10"></label>
+  <label>Transformer kVA<input id="ctlTx" type="number" min="100" max="5000" value="630"></label>
+ </div>
+ <div class="heroActions"><button class="btn primary" id="ctlRun">Run selected test</button><button class="btn" id="ctlCompare">Compare all three policies</button><button class="btn" id="ctlPower">Fast AC power-flow check</button></div>
+ <div id="ctlResult" class="resultBox"><span class="statusPill">READY</span> Choose a scenario and configuration, then run a test.</div>
+</section>
 
-/* ---------- panels ---------- */
-.panel{background:var(--panel);border:1px solid var(--rule);padding:18px 18px 14px;
-  box-shadow:var(--shadow)}
-.panel + .panel{margin-top:14px}
-.ptitle{display:flex;align-items:baseline;justify-content:space-between;gap:14px;
-  margin-bottom:3px}
-.ptitle h2{font-size:16.5px}
-.ptitle span{color:var(--ink-3);font-size:12.5px}
-.note{color:var(--ink-2);font-size:13.5px;margin:2px 0 14px;max-width:74ch}
+<div class="sectionLabel" id="kits">THREE NEOS OPERATING KITS</div>
+<section class="panel">
+ <div class="ptitle"><h2>Same NEOS brain · different neighbourhood rules</h2><span>implemented code exposed where available</span></div>
+ <div class="kitTabs"><button class="chip active" data-kit="urban">Urban / Suburban</button><button class="chip" data-kit="semi">Semi-urban / Peri-urban</button><button class="chip" data-kit="rural">Rural</button></div>
+ <div id="kitUrban" class="extraGrid three" style="margin-top:14px"><div class="miniCard"><h3>EV + PV flexibility</h3><p>Coordinate EV charging, rooftop PV, home batteries and flexible loads against feeder constraints.</p></div><div class="miniCard"><h3>OpenDSS core</h3><p>Unbalanced AC verification, transformer loading, voltage, line ampacity and safety projection.</p></div><div class="miniCard"><h3>Evidence</h3><p>Strongest quantitatively validated kit; OpenDSS-generated results are the authoritative evidence.</p></div></div>
+ <div id="kitSemi" class="extraGrid three" style="margin-top:14px;display:none"><div class="miniCard"><h3>Community Energy Hub</h3><p>Shared battery, essential-service prioritisation, outage support and load-limited island concept.</p></div><div class="miniCard"><h3>Hub test</h3><p>Run the implemented seeded hub simulator and compare no-hub, battery-only and battery-flex arms.</p><button class="btn primary" onclick="runHub()" style="margin-top:10px">Run hub simulation</button></div><div class="miniCard"><h3>Offline participation</h3><p>Noticeboard/SMS generation and shortage communication are available as operating-layer outputs.</p></div></div>
+ <div id="kitRural" class="extraGrid three" style="margin-top:14px;display:none"><div class="miniCard"><h3>Shared solar + battery</h3><p>100 kWp research portfolio, community battery, weak-feeder physics and protected reserve.</p></div><div class="miniCard"><h3>Rural scheduler</h3><p>Pumps, water storage, cold/thermal storage, productive loads, deadlines and priority tiers.</p><button class="btn primary" onclick="runRural()" style="margin-top:10px">Run rural simulation</button></div><div class="miniCard"><h3>Surplus routing</h3><p>Local demand → storage → water pumping → thermal/cold → productive work → export → curtailment.</p></div></div>
+ <div id="kitResult" class="resultBox"><span class="statusPill">KIT</span> Select a kit to explore its live simulator.</div>
+</section>
 
-.switchbar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:2px 0 12px}
-.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--ink-2)}
-.legend i{display:inline-block;width:20px;height:2px;vertical-align:middle;margin-right:6px}
-.legend i.dash{height:0;border-top:2px dashed currentColor}
+<div class="sectionLabel" id="lab">ENGINEERING TEST LAB</div>
+<section class="panel">
+ <div class="ptitle"><h2>Test every operating layer</h2><span>not just the headline dashboard</span></div>
+ <div class="extraGrid three">
+  <div class="miniCard"><h3>Phase-aware gateway</h3><p>Per-phase voltage, current, PF, loading, imbalance and recommendation.</p><button class="btn" onclick="runPhase()" style="margin-top:10px">Run phase check</button></div>
+  <div class="miniCard"><h3>Islanding state machine</h3><p>Conceptual/simulated outage transition: detect → isolate → island → resynchronise.</p><button class="btn" onclick="runIsland()" style="margin-top:10px">Run concept simulation</button></div>
+  <div class="miniCard"><h3>Offline continuity</h3><p>Generate noticeboard, SMS and shortage outputs for communities without continuous connectivity.</p><button class="btn" onclick="runOffline()" style="margin-top:10px">Generate offline outputs</button></div>
+  <div class="miniCard"><h3>Flexibility Envelope</h3><p>Estimated safe flexibility after reserve, device limits and transformer headroom.</p><button class="btn" onclick="runFlex()" style="margin-top:10px">Calculate envelope</button></div>
+  <div class="miniCard"><h3>Decision Trace</h3><p>What happened, why, proposed action, safety intervention and final verification status.</p><button class="btn" onclick="runTrace()" style="margin-top:10px">Load trace</button></div>
+  <div class="miniCard"><h3>EV requirement override</h3><p>Declare “I need my car now” and inspect the auditable queued/applied simulation event.</p><button class="btn" onclick="queueOverride()" style="margin-top:10px">Queue EV requirement</button></div>
+ </div>
+ <div id="labResult" class="resultBox"><span class="statusPill">TEST LAB</span> No secondary module test has been run yet.</div>
+</section>
 
-svg{display:block;width:100%;height:auto;overflow:visible}
-.axis{stroke:var(--rule);stroke-width:1}
-.gridline{stroke:var(--rule-soft);stroke-width:1}
-.tick{fill:var(--ink-3);font-size:10.5px}
-.alab{fill:var(--ink-2);font-size:11px}
+<div class="sectionLabel" id="utility">UTILITY / DISCOM VIEW</div>
+<section class="panel">
+ <div class="ptitle"><h2>Flexibility request & verification layer</h2><span>simulated utility-facing interface</span></div>
+ <div class="extraGrid three"><div class="miniCard"><h3>Available flexibility</h3><p>Current safe flexibility, duration, confidence, reserve and constraint metadata.</p></div><div class="miniCard"><h3>Request lifecycle</h3><p>Accept / modify / defer / reject concept with expiring commands and measured delivery.</p></div><div class="miniCard"><h3>Verification ledger</h3><p>Hash-chained requested vs delivered records, including communications-loss synchronisation.</p></div></div>
+ <div class="heroActions"><button class="btn primary" onclick="runDiscom()">Run DISCOM simulation</button><button class="btn" onclick="loadOverrides()">View override ledger</button></div>
+ <div id="utilityResult" class="resultBox"><span class="statusPill">DISCOM</span> No utility-layer simulation has been run.</div>
+</section>
 
-/* ---------- verdict + metrics ---------- */
-.two{display:grid;grid-template-columns:1fr;gap:14px;margin-top:14px}
-@media(min-width:840px){.two{grid-template-columns:320px 1fr}}
-.verdict p{margin:0 0 10px;font-size:14px;color:var(--ink-2)}
-.verdict p:last-child{margin-bottom:0}
-.verdict b{color:var(--ink);font-weight:600}
+<div class="sectionLabel" id="trace">TRACE & PROVENANCE</div>
+<section class="panel">
+ <div class="ptitle"><h2>What NEOS did, why it did it, and what can be claimed</h2><span>auditable by design</span></div>
+ <div class="endpointList"><div><b>Forecast</b><br>P10 / P50 / P90 + uncertainty</div><div><b>Optimisation</b><br>LP / MILP / MPC architecture</div><div><b>Safety</b><br>Voltage · thermal · phase · device · reserve</div><div><b>Physics</b><br>OpenDSS unbalanced AC verification</div><div><b>Decision</b><br>VERIFIED / INFEASIBLE / SOLVER_FAILED</div><div><b>Evidence</b><br>Seed · configuration · backend · provenance</div></div>
+ <div id="traceResult" class="resultBox"><span class="statusPill">PROVENANCE</span> Every current quantitative result should remain tied to scenario, seed, configuration and backend.</div>
+</section>
 
-table.metrics{width:100%;border-collapse:collapse;font-size:13.5px}
-table.metrics th{text-align:right;font-weight:500;color:var(--ink-3);font-size:12px;
-  padding:0 0 7px;border-bottom:1px solid var(--rule)}
-table.metrics th:first-child{text-align:left}
-table.metrics td{padding:9px 0;border-bottom:1px solid var(--rule-soft);text-align:right}
-table.metrics td:first-child{text-align:left;color:var(--ink-2)}
-table.metrics tr:last-child td{border-bottom:0}
-.delta{font-weight:600}
-.delta.good{color:var(--ok)} .delta.bad{color:var(--bad)} .delta.flat{color:var(--ink-3)}
-.bar{height:4px;background:var(--rule-soft);position:relative;margin-top:5px}
-.bar span{position:absolute;inset:0 auto 0 0;background:var(--ink-3)}
-.bar span.after{background:var(--ok)}
-
-/* ---------- forecast table ---------- */
-h3{font-size:14px;margin:20px 0 6px;color:var(--ink)}
-ul.lim{margin:6px 0 0 18px;padding:0;color:var(--ink-2);font-size:13px}ul.lim li{margin:4px 0}
-table.fc{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
-table.fc th,table.fc td{padding:7px 8px;border-bottom:1px solid var(--rule-soft);text-align:right}
-table.fc th{color:var(--ink-3);font-weight:500;font-size:11.5px;border-bottom:1px solid var(--rule)}
-table.fc th:first-child,table.fc td:first-child{text-align:left}
-table.fc tr.hl td{background:color-mix(in srgb,var(--ok) 9%,transparent);font-weight:500}
-table.fc td.miss{color:var(--bad)} table.fc td.hit{color:var(--ok)}
-
-.foot{margin-top:38px;padding-top:18px;border-top:1px solid var(--rule);
-  color:var(--ink-3);font-size:13px;max-width:78ch}
-.scroll{overflow-x:auto}
-
-.readout{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--rule);
-  border:1px solid var(--rule);margin-bottom:14px}
-@media(min-width:700px){.readout{grid-template-columns:repeat(4,1fr)}}
-.readout div{background:var(--panel);padding:9px 11px}
-.readout span{display:block;color:var(--ink-3);font-size:11px}
-.readout b{font-size:19px;font-weight:600;letter-spacing:-.01em}
-.knobs{display:grid;gap:14px;grid-template-columns:1fr}
-@media(min-width:700px){.knobs{grid-template-columns:repeat(2,1fr)}}
-.knob label{display:flex;justify-content:space-between;font-size:13px;color:var(--ink-2);margin-bottom:4px}
-.knob label b{color:var(--ink);font-weight:600}
-.knob input[type=range]{width:100%;accent-color:var(--ok)}
-.chip[disabled]{opacity:.45;cursor:default}
-.loading{color:var(--ink-3);font-size:13px}
-
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-</style>
-</head>
-<body>
-<header class="top">
-  <div class="top-in">
-    <div>
-      <h1>One transformer, 300 homes, no one told to change their day</h1>
-      <p class="sub">A distribution feeder simulated with an unbalanced three-phase load flow, driven by causal probabilistic forecasts and a
-      chance-constrained optimiser. Every action is re-solved against the AC power flow and labelled verified, infeasible or solver-failed. A research simulator: it commands no equipment.</p>
-    </div>
-    <div class="plate" id="plate"></div>
-    <a class="brand" href="#home" aria-label="NEOS home">
-      <svg viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M16 2C8.4 2 3 7.8 3 15.4c0 7.9 5.4 13.1 12.3 13.1 7.2 0 12.7-6.1 12.7-14.1V3.7C22.8 3.4 19.1 2 16 2Zm7.2 10.1c-5.8.7-10.1 3.3-13.2 8.2l-2.1-1.4c3.4-5.5 8.4-8.5 15.3-9.4v2.6Z"/></svg>
-      <span>NEOS</span>
-    </a>
-  </div>
-</header>
-
-<nav class="section-nav" aria-label="NEOS pages">
-  <a href="#overview">Overview</a><a href="#flexibility">Flexibility</a>
-  <a href="#grid">Grid</a><a href="#forecast">Forecast</a>
-  <a href="#evidence-page">Evidence</a><a href="#decisions">Decision flow</a>
-</nav>
-
-<div class="wrap" id="home">
-  <div class="rail" id="rail" role="group" aria-label="Scenario"></div>
-  <section class="panel" id="livePanel">
-    <div class="ptitle"><h2>Live control loop</h2><span id="liveClock">idle</span></div>
-    <p class="note">96 control steps, one every 15 simulated minutes. Each step is a fresh
-    forecast window, a fresh linear programme, and a fresh unbalanced AC power flow before
-    anything is allowed to reach a device.</p>
-    <div class="switchbar">
-      <button class="chip" id="runCo" type="button">Run coordinated</button>
-      <button class="chip" id="runUn" type="button">Run without coordination</button>
-      <button class="chip" id="runStop" type="button" disabled>Stop</button>
-      <span class="legend"><span id="liveMode" style="color:var(--ink-3)"></span></span>
-    </div>
-    <div id="liveReadout" class="readout"></div>
-    <div id="liveChart"></div>
-  </section>
-
-  <section class="panel">
-    <div class="ptitle"><h2>Change the neighbourhood</h2><span>re-runs the whole study</span></div>
-    <p class="note">The interesting question is not whether this works on one feeder. It is where the
-    benefit disappears. Move the sliders and every number on this page is recomputed from the physics.</p>
-    <div class="knobs" id="knobs"></div>
-    <div class="switchbar"><button class="chip" id="applyCfg" type="button">Apply and re-run</button>
-      <span id="cfgState" style="color:var(--ink-3);font-size:13px"></span></div>
-  </section>
-
-
-  <section class="panel" id="overview">
-    <div class="ptitle"><h2 id="scTitle"></h2><span id="scDesc"></span></div>
-    <div class="switchbar">
-      <div class="legend">
-        <span style="color:var(--bad)"><i></i>No coordination</span>
-        <span style="color:var(--ok)"><i></i>Coordinated</span>
-        <span style="color:var(--ink-3)"><i class="dash"></i>Transformer rating</span>
-      </div>
-    </div>
-    <div id="heroChart"></div>
-  </section>
-
-  <div class="two">
-    <section class="panel verdict">
-      <div class="ptitle"><h2>What the system did</h2></div>
-      <div id="verdict"></div>
-    </section>
-    <section class="panel">
-      <div class="ptitle"><h2>Outcome</h2><span>24 h window, 12:00 → 12:00</span></div>
-      <div class="scroll"><table class="metrics" id="metrics"></table></div>
-    </section>
-  </div>
-
-  <section class="panel" id="flexibility">
-    <div class="ptitle"><h2>Where the flexibility came from</h2><span>coordinated run</span></div>
-    <p class="note">Nobody was switched off. Electric vehicles, home storage and deferrable appliances were
-    moved inside the limits their owners had already accepted — into the solar window and the overnight
-    trough, and out of the evening peak.</p>
-    <div class="legend" style="margin-bottom:8px">
-      <span style="color:var(--solar)"><i></i>Rooftop solar available</span>
-      <span style="color:var(--ev)"><i></i>EV charging</span>
-      <span style="color:var(--store)"><i></i>Storage</span>
-      <span style="color:var(--ink-2)"><i></i>Deferrable appliances</span>
-    </div>
-    <div id="flexChart"></div>
-  </section>
-
-  <section class="panel" id="grid">
-    <div class="ptitle"><h2>Voltage at the worst node on the feeder</h2><span>statutory band ±6 %</span></div>
-    <p class="note">Peak kilowatts are the headline, but voltage is what actually fails first on Indian LV
-    feeders. The safety layer treats the lower band as a hard constraint, not a penalty term.</p>
-    <div id="voltChart"></div>
-  </section>
-
-  <section class="panel" id="forecast">
-    <div class="ptitle"><h2>The forecast the controller was given</h2><span>day-ahead, issued at 12:00</span></div>
-    <p class="note">The optimiser never sees a single number. It sizes import headroom from the upper
-    demand quantile and the lower solar quantile, so the width of these bands is a safety input — which is
-    why the bands are calibrated rather than merely sharp.</p>
-    <div id="fcChart"></div>
-  </section>
-
-  <section class="panel">
-    <div class="ptitle"><h2>Did the clever model earn its place?</h2><span>chronological hold-out, 7 unseen days</span></div>
-    <p class="note">Baselines first. A model only ships if it beats causal baselines on a quantile score
-    <em>and</em> its stated intervals hold at every lead time. Every feature is built from an explicit forecast
-    issue time, and weather inputs are issue-time forecasts, never realised weather. Raw quantile regression
-    under-covers; conformal widening on a later calibration block repairs it, but coverage is measured, not assumed.</p>
-    <div class="scroll"><table class="fc" id="fcTable"></table></div>
-  </section>
-
-  <section class="panel" id="evidence-page">
-    <div class="ptitle"><h2>Evidence, not a single run</h2><span>paired · multi-seed · held-out</span></div>
-    <div id="evidence"></div>
-  </section>
-
-  <section class="panel" id="decisions">
-    <div class="ptitle"><h2>How a decision is made</h2><span>every 30 minutes</span></div>
-    <div id="pipe"></div>
-  </section>
-
-  <p class="foot" id="foot"></p>
-</div>
-
+<div class="sectionLabel" id="architecture">SYSTEM ARCHITECTURE</div>
+<section class="panel"><div class="ptitle"><h2>NEOS control architecture</h2><span>Forecast → Optimise → Physics-Verify → Dispatch → Measure → Explain</span></div><div class="arch"><div><strong>Forecast</strong><span>Demand + solar distributions, P10/P50/P90, uncertainty.</span></div><div><strong>Optimise</strong><span>MPC / LP / MILP schedules flexible resources.</span></div><div><strong>Safety</strong><span>Projection, reserve, voltage, line and transformer constraints.</span></div><div><strong>OpenDSS</strong><span>Unbalanced AC digital twin verifies proposed actions.</span></div><div><strong>Dispatch</strong><span>Simulation-only resource setpoints within accepted limits.</span></div><div><strong>Explain</strong><span>Decision trace, evidence tags and human-readable rationale.</span></div></div><div class="architectureNote">The deployed boundary is <b>simulation boundary · no physical actuator control</b>. There is no physical actuator control. The backend exposes REST/JSON and server-sent event simulation endpoints through FastAPI.</div></section>
+<section class="panel"><div class="ptitle"><h2>Deployment & reproducibility</h2><span>live environment</span></div><div class="statusGrid"><div class="statusBox"><div class="label">Backend</div><b id="deployBackend">Render · FastAPI</b></div><div class="statusBox"><div class="label">Grid engine</div><b id="deployGrid">OpenDSSDirect 0.9.4</b></div><div class="statusBox"><div class="label">Version</div><b>NEOS 1.0</b></div><div class="statusBox"><div class="label">Frontend</div><b>Static web · Vercel-ready</b></div></div><p class="note" style="margin-top:14px">The service reports its runtime provenance through the health endpoint, including Python, NumPy, SciPy, scikit-learn, OpenDSSDirect and source SHA-256 information.</p><div class="monoBlock">NEOS pipeline: Sense → Forecast → Flexibility Envelope → Optimise → Safety Projection → OpenDSS Verification → Decision Trace → Measure → Explain</div></section>
+<section class="panel"><div class="ptitle"><h2>How a decision is made</h2><span>control loop</span></div><div id="pipe"></div></section>
+<p class="foot" id="foot"></p></div>
 <script>
 
 const DT = 0.25, T0 = 12;            // window starts at 12:00
@@ -455,7 +295,7 @@ const ROWS=[
   ["Worst line loading (ampacity)", m=>m.max_line_loading, "%", 1, "down"],
   ["Node-hours outside the voltage band", m=>m.node_hours_v_violation, "", 1, "down"],
   ["Steps fully AC-verified", m=>m.steps_verified_pct, " %", 1, "up"],
-  ["Neighbourhood electricity bill", m=>m.total_cost_inr, " ₹", 0, "down"],
+  ["Neighbourhood electricity bill", m=>m.total_cost_inr, " â‚¹", 0, "down"],
   ["Solar used locally", m=>m.pv_self_consumption*100, " %", 1, "up"],
   ["Solar curtailed (planned + protective)", m=>m.curtailed_kwh, " kWh", 0, "down"],
   ["Network losses", m=>m.losses_kwh, " kWh", 0, "down"],
@@ -493,7 +333,7 @@ function renderVerdict(sc){
     ${over? "but still crosses the nameplate rating — this event is larger than the flexibility available, and the system degrades gracefully rather than pretending otherwise."
           : "and the feeder stayed inside its thermal and voltage limits for the whole day."}</p>`;
   html+=`<p>${curtSaved>1? `<b>${fmt(curtSaved,0)} kWh</b> of rooftop solar that would have been curtailed on overvoltage was absorbed locally instead. `:""}
-    The neighbourhood bill fell by <b>₹${fmt(saved,0)}</b>, and
+    The neighbourhood bill fell by <b>â‚¹${fmt(saved,0)}</b>, and
     <b>${fmt(c.ev_satisfaction*100,0)} %</b> of drivers still left with the charge they had asked for.</p>`;
   const st=c.constraint_status_steps||{};
   if(c.safety_interventions>0)
@@ -536,8 +376,8 @@ function renderEvidence(){
   const E=D.study; if(!E){ $("#evidence").innerHTML='<p class="note">Run <code>python experiments.py</code> to generate the multi-seed study.</p>'; return; }
   const f=(x,d=1)=>fmt(x,d), ci=o=>`${o.mean>0?'+':''}${f(o.mean)} [${f(o.ci95[0])}, ${f(o.ci95[1])}]`;
   let h=`<h3>Paired multi-seed study, ${D.meta.replicates} replicates per scenario (development neighbourhood)</h3>
-  <div class="scroll"><table class="fc"><tr><th>Scenario</th><th>Peak %: none</th><th>rule</th><th>MPC</th><th>MPC − none, pp (95 % CI)</th>
-  <th>Bill change, ₹ (95 % CI)</th><th>EV missed (none/rule/MPC)</th><th>Verified steps % (MPC)</th><th>Infeasible steps (MPC)</th></tr>`;
+  <div class="scroll"><table class="fc"><tr><th>Scenario</th><th>Peak %: none</th><th>rule</th><th>MPC</th><th>MPC âˆ’ none, pp (95 % CI)</th>
+  <th>Bill change, â‚¹ (95 % CI)</th><th>EV missed (none/rule/MPC)</th><th>Verified steps % (MPC)</th><th>Infeasible steps (MPC)</th></tr>`;
   for(const k in E){ const s=E[k], p=s.peak_tx_loading, c=s.total_cost_inr;
     h+=`<tr><td>${D.scenarios[k]?D.scenarios[k].title.replace(/^\S+\s/,""):k}</td>
     <td>${f(p.uncoordinated.mean)} ± ${f(p.uncoordinated.sd)}</td><td>${f(p.rule_tou.mean)}</td><td><b>${f(p.coordinated.mean)} ± ${f(p.coordinated.sd)}</b></td>
@@ -549,15 +389,15 @@ function renderEvidence(){
   "EV missed" counts sessions across all replicates that ended below the owner's requirement: a P10 departure commitment
   accepts roughly one in ten tail departures, and that is measured here rather than hidden.</p>`;
   const H=D.held_out||{}, hk=Object.keys(H);
-  if(hk.length){ h+=`<h3>Held-out neighbourhoods (populations never used in development)</h3><div class="scroll"><table class="fc"><tr><th>Neighbourhood seed</th><th>Mean peak %: none</th><th>rule</th><th>MPC</th><th>Scenarios where MPC ≤ 100 %</th></tr>`;
+  if(hk.length){ h+=`<h3>Held-out neighbourhoods (populations never used in development)</h3><div class="scroll"><table class="fc"><tr><th>Neighbourhood seed</th><th>Mean peak %: none</th><th>rule</th><th>MPC</th><th>Scenarios where MPC â‰¤ 100 %</th></tr>`;
     for(const k of hk){ const sc=Object.values(H[k]);
       const m=(a)=>sc.reduce((x,o)=>x+o.peak_tx_loading[a].mean,0)/sc.length;
       const ok=sc.filter(o=>o.peak_tx_loading.coordinated.mean<=100.5).length;
       h+=`<tr><td>${k}</td><td>${f(m('uncoordinated'))}</td><td>${f(m('rule_tou'))}</td><td><b>${f(m('coordinated'))}</b></td><td>${ok} of ${sc.length}</td></tr>`; }
     h+=`</table></div>`; }
   const C=D.calibration;
-  if(C) h+=`<h3>Digital-twin calibration (physical parameter estimation)</h3><p class="note">The plant's LV impedance is ${f(C.true_scale,2)}× nameplate; the twin starts at 1.00×.
-    From ${C.n_fit} noisy voltage measurements it identifies <b>${f(C.estimated_scale,3)}×</b> (bootstrap CI ${f(C.ci95[0],3)}–${f(C.ci95[1],3)}).
+  if(C) h+=`<h3>Digital-twin calibration (physical parameter estimation)</h3><p class="note">The plant's LV impedance is ${f(C.true_scale,2)}Ã— nameplate; the twin starts at 1.00Ã—.
+    From ${C.n_fit} noisy voltage measurements it identifies <b>${f(C.estimated_scale,3)}Ã—</b> (bootstrap CI ${f(C.ci95[0],3)}–${f(C.ci95[1],3)}).
     Of dispatches the twin certified safe, the plant violated limits <b>${f(C.before.false_safe_rate*100,1)} %</b> of the time before calibration and
     <b>${f(C.after.false_safe_rate*100,1)} %</b> after; voltage RMSE fell from ${f(C.before.v_rmse*1000,2)} to ${f(C.after.v_rmse*1000,2)} mpu.
     ${C.note}</p>`;
@@ -579,38 +419,59 @@ function renderEvidence(){
 
 
 
-const API = "";
+const API = (location.hostname === "localhost" || location.hostname === "127.0.0.1") ? "" : "https://neos-arpj.onrender.com";
 let P = {n_homes:300, n_ev:60, n_pv:150, n_bess:26, tx_kva:630};
 const D = {meta:null, forecast_benchmark:null, pv_calibration:null, scenarios:{}, study:null};
 const qs = () => new URLSearchParams(P).toString();
-async function j(u){const r=await fetch(API+u); if(!r.ok) throw new Error(await r.text()); return r.json();}
+async function j(u,opts={}){const r=await fetch(API+u,opts); if(!r.ok) throw new Error(await r.text()); return r.json();}
 
 const SCENARIO_ICON = {normal:"\u2600\uFE0F",cloud:"\u2601\uFE0F",heat:"\uD83D\uDD25",
   evsurge:"\uD83D\uDE97",shortage:"\u26A1",battfail:"\uD83D\uDD0B",spike:"\uD83D\uDCC8"};
 
 /* ---------- bootstrap ---------- */
-async function boot(){
-  D.meta = await j("/api/meta?"+qs());
-  renderPlate();
-  const cat = await j("/api/scenarios");
-  cat.forEach(s => D.scenarios[s.key] = {title:(SCENARIO_ICON[s.key]||"")+" "+s.title, desc:s.description});
-  renderRail(); renderKnobs();
-  const b = await j("/api/forecast/benchmark?"+qs());
-  D.forecast_benchmark = b.models; D.pv_calibration = b.pv_ensemble;
-  renderForecastTable(); drawPipe();
-  try{ const E = await j("/api/evidence"); Object.assign(D,{study:E.study,held_out:E.held_out,calibration:E.calibration,override_study:E.override_study,limitations:E.limitations,provenance:E.provenance}); D.meta.replicates=E.meta.replicates; }catch(e){}
-  D.meta.grid_backend = D.meta.grid_backend||"reference"; renderEvidence();
-  await select(Object.keys(D.scenarios)[0], true);
+async function renderPlatformStatus(){
+  try{
+    const p=await j("/api/platform");
+    const caps=p.capabilities||{};
+    const el=$("#platformCaps");
+    el.innerHTML=Object.entries(caps).map(([k,v])=>{
+      const cls=(String(v).includes("simulation")||String(v).includes("stage1"))?"partial":(String(v).includes("not_implemented")?"no":"");
+      return `<div class="cap ${cls}"><b>${k.replaceAll("_"," ")}</b><span>${v}</span></div>`;
+    }).join("");
+    $("#topStatus").textContent="NEOS backend online · OpenDSS verified";
+  }catch(e){$("#topStatus").textContent="NEOS backend unavailable";}
 }
 
+async function boot(){
+  try{
+    D.meta=await j("/api/meta?"+qs()); renderPlate(); renderPlatformStatus();
+  }catch(e){
+    $("#topStatus").textContent="NEOS backend unavailable";
+    $("#heroBackend").textContent="OFFLINE";
+    $("#liveClock").textContent=friendlyError(e);
+    $("#cfgState").textContent="Connect the deployed NEOS backend, then refresh.";
+    return;
+  }
+  try{
+    const cat=await j("/api/scenarios");
+    cat.forEach(s=>D.scenarios[s.key]={title:(SCENARIO_ICON[s.key]||"•")+" "+s.title,desc:s.description});
+    renderRail(); renderKnobs(); renderWeatherCards();
+  }catch(e){$("#topStatus").textContent="NEOS online · scenarios unavailable"; return;}
 async function ensure(k){
-  const sc = D.scenarios[k];
+  if(!D.scenarios || !D.scenarios[k]){
+    const data=await j('/api/scenarios');
+    D.scenarios=data.scenarios||data;
+  }
+  const sc=D.scenarios[k];
+  if(!sc) throw new Error('Scenario not found: '+k);
   if(sc.coordinated) return sc;
-  Object.assign(sc, await j("/api/compare?scenario="+k+"&"+qs()));
-  sc.title = (SCENARIO_ICON[k]||"")+" "+sc.title;
+  const result=await j('/api/compare?scenario=' + encodeURIComponent(k) + '&' + qs());
+  Object.assign(sc,result);
+  sc.title=(SCENARIO_ICON[k]||'')+' '+sc.title;
   return sc;
 }
 
+// Heavy research panels load independently so one slow endpoint never blanks the whole console.
 function renderRail(){
   const r = $("#rail"); r.innerHTML="";
   for(const k in D.scenarios){
@@ -631,7 +492,7 @@ async function select(k, animate=true){
   $("#scTitle").textContent=sc.title.replace(/^\S+\s/,"");
   $("#scDesc").textContent=sc.desc;
   drawHero(sc,animate); drawFlex(sc); drawVolt(sc); drawForecast(sc);
-  renderMetrics(sc); renderVerdict(sc);
+  renderMetrics(sc); renderVerdict(sc); renderWeatherCards();
 }
 
 /* ---------- live stream ---------- */
@@ -639,19 +500,27 @@ let es=null, live=[];
 function liveStop(){ if(es){es.close(); es=null;} $("#runStop").disabled=true;
   $("#runCo").disabled=false; $("#runUn").disabled=false; }
 
+function friendlyError(e){
+  const m=String(e&&e.message||e||"Unknown error");
+  if(/failed to fetch|networkerror|load failed/i.test(m)) return "NEOS backend could not be reached. Check Render status/CORS and refresh.";
+  return m;
+}
 function liveStart(mode){
-  liveStop(); live=[]; $("#liveMode").textContent = mode==="coordinated"
-    ? "optimiser active, safety layer armed" : "no coordination, autonomous inverter protection only";
+  liveStop(); live=[];
+  $("#liveMode").innerHTML=`<span class="runState">${mode==="coordinated"?"NEOS optimiser active · safety layer armed":"No coordination · local protection only"}</span>`;
+  $("#liveClock").textContent="connecting to NEOS…";
   $("#runStop").disabled=false; $("#runCo").disabled=true; $("#runUn").disabled=true;
-  es = new EventSource(API+"/api/stream?scenario="+current+"&mode="+mode+"&"+qs());
-  es.onmessage = ev => {
-    const d = JSON.parse(ev.data);
-    if(d.error){ $("#liveClock").textContent = "failed: "+d.error; liveStop(); return; }
-    if(d.done){ $("#liveClock").textContent = "run complete — peak "+d.metrics.peak_tx_loading.toFixed(1)+" %";
-      liveStop(); return; }
-    live.push(d); drawLive(d);
+  const url=API+"/api/stream?scenario="+encodeURIComponent(current)+"&mode="+encodeURIComponent(mode)+"&"+qs();
+  es=new EventSource(url);
+  es.onopen=()=>$("#liveClock").textContent="simulation running · waiting for first verified step…";
+  es.onmessage=ev=>{
+    try{const d=JSON.parse(ev.data);
+      if(d.error){$("#liveClock").textContent="run failed: "+d.error; liveStop(); return;}
+      if(d.done){$("#liveClock").textContent="run complete · peak "+Number(d.metrics.peak_tx_loading).toFixed(1)+" %"; liveStop(); return;}
+      live.push(d); drawLive(d);
+    }catch(err){console.warn("Invalid NEOS stream event",err);}
   };
-  es.onerror = () => { $("#liveClock").textContent="connection lost"; liveStop(); };
+  es.onerror=()=>{ if(live.length){$("#liveClock").textContent="stream interrupted after step "+live.length+" · backend may still be completing the simulation";} else $("#liveClock").textContent="connection failed · "+friendlyError(new Error("Failed to fetch")); liveStop(); };
 }
 
 function drawLive(d){
@@ -683,40 +552,45 @@ function drawLive(d){
 }
 
 /* ---------- what-if knobs ---------- */
-const KNOBS=[["n_ev","Electric vehicles",0,180,10],["n_pv","Rooftop solar installations",0,300,10],
-  ["n_bess","Home batteries",0,100,2],["tx_kva","Transformer rating (kVA)",315,1000,5]];
+const KNOBS=[
+  ["n_homes","Homes",50,1000,10],
+  ["n_ev","Electric vehicles",0,300,10],
+  ["n_pv","Rooftop solar installations",0,500,10],
+  ["n_bess","Home batteries",0,150,2],
+  ["n_comm","Commercial sites",0,50,1],
+  ["tx_kva","Transformer rating (kVA)",315,1500,5]
+];
 function renderKnobs(){
-  $("#knobs").innerHTML = KNOBS.map(([k,lab,mn,mx,st])=>
-    `<div class="knob"><label for="k_${k}">${lab}<b id="v_${k}">${P[k]}</b></label>
-     <input id="k_${k}" type="range" min="${mn}" max="${mx}" step="${st}" value="${P[k]}"></div>`).join("");
-  KNOBS.forEach(([k])=>{
-    const el=$("#k_"+k);
-    el.oninput=()=>{ $("#v_"+k).textContent=el.value; };
-  });
-  $("#applyCfg").onclick=async()=>{
-    liveStop();
-    KNOBS.forEach(([k])=>P[k]=Number($("#k_"+k).value));
-    $("#cfgState").textContent="rebuilding the feeder and refitting the forecaster…";
-    $("#applyCfg").disabled=true;
-    try{
-      for(const k in D.scenarios){ const t=D.scenarios[k].title, d=D.scenarios[k].desc;
-        D.scenarios[k]={title:t,desc:d}; }
-      D.meta = await j("/api/meta?"+qs()); renderPlate();
-      const b = await j("/api/forecast/benchmark?"+qs());
-      D.forecast_benchmark=b.models; D.pv_calibration=b.pv_ensemble; renderForecastTable();
-      await select(current,true);
-      $("#cfgState").textContent="done";
-    }catch(e){ $("#cfgState").textContent="failed: "+e.message; }
-    $("#applyCfg").disabled=false;
-  };
+  const host=$("#knobs"); if(!host) return;
+  host.innerHTML=KNOBS.map(([k,lab,mn,mx,st])=>`<div class="knob"><label for="k_${k}">${lab}<b id="v_${k}">${P[k]}</b></label><input id="k_${k}" type="range" min="${mn}" max="${mx}" step="${st}" value="${P[k]}"></div>`).join("");
+  KNOBS.forEach(([k])=>{const el=$("#k_"+k); el.oninput=()=>$("#v_"+k).textContent=el.value;});
+  $("#applyCfg").onclick=applyConfig;
 }
-
-$("#runCo").onclick=()=>liveStart("coordinated");
-$("#runUn").onclick=()=>liveStart("uncoordinated");
-$("#runStop").onclick=liveStop;
+async function applyConfig(){
+  liveStop();
+  KNOBS.forEach(([k])=>P[k]=Number($("#k_"+k).value));
+  $("#cfgState").textContent="Rebuilding feeder and refreshing forecasts…";
+  $("#applyCfg").disabled=true;
+  try{
+    Object.keys(D.scenarios).forEach(k=>{const {title,desc}=D.scenarios[k];D.scenarios[k]={title,desc};});
+    D.meta=await j("/api/meta?"+qs()); renderPlate();
+    const b=await j("/api/forecast/benchmark?"+qs()); D.forecast_benchmark=b.models; D.pv_calibration=b.pv_ensemble; renderForecastTable();
+    await select(current,true);
+    $("#cfgState").textContent="Configuration applied · feeder and forecast refreshed";
+  }catch(e){$("#cfgState").textContent="Configuration refresh failed: "+friendlyError(e);}
+  finally{$("#applyCfg").disabled=false;}
+}
+function renderWeatherCards(){
+  const host=$("#weatherCards"); if(!host) return;
+  const order=["normal","cloud","heat","shortage","evsurge","battfail","spike"];
+  host.innerHTML=order.filter(k=>D.scenarios[k]).map(k=>{const s=D.scenarios[k]; const icon=SCENARIO_ICON[k]||"•"; return `<button type="button" class="weatherCard ${k===current?"active":""}" data-weather="${k}"><div class="wi">${icon}</div><b>${s.title.replace(/^\S+\s/,"")}</b><span>${s.desc||"Stress condition"}</span></button>`}).join("");
+  host.querySelectorAll("[data-weather]").forEach(b=>b.onclick=()=>select(b.dataset.weather));
+}
 
 function renderPlate(){
   const m=D.meta;
+  $("#kHomes").textContent=m.homes; $("#kEV").textContent=m.evs; $("#kBatt").textContent=m.batteries; $("#kComm").textContent=m.commercial; $("#kNodes").textContent=m.nodes; $("#kHead").textContent=fmt(m.import_headroom_kw,0);
+  $("#heroHomes").textContent=m.homes; $("#heroTx").textContent=fmt(m.tx_kva,0); $("#heroEV").textContent=m.evs; $("#heroPV").textContent=fmt(m.pv_kwp,0);
   $("#plate").innerHTML=
     `<div><span>Homes</span><b>${m.homes}</b></div>`+
     `<div><span>Rooftop solar</span><b>${fmt(m.pv_kwp,0)} kWp</b></div>`+
@@ -733,8 +607,45 @@ function renderPlate(){
 }
 
 let rt; addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>select(current,false),200)});
-boot().catch(e=>{ document.querySelector(".wrap").insertAdjacentHTML("afterbegin",
-  `<p class="loading">Backend not reachable (${e.message}). Start it with <code>uvicorn server:app --port 8000</code>, or open static-demo.html.</p>`); });
-</script>
-</body>
-</html>
+boot();
+</script><script>
+function ctlParams(){return new URLSearchParams({n_homes:$('#ctlHomes').value,n_ev:$('#ctlEV').value,n_pv:$('#ctlPV').value,n_bess:$('#ctlBatt').value,n_comm:$('#ctlComm').value,tx_kva:$('#ctlTx').value});}
+function jsonPretty(o){return `<pre>${JSON.stringify(o,null,2).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))}</pre>`;}
+function setBox(id,html){$(id).innerHTML=html;}
+async function ctlRun(){const s=$('#ctlScenario').value,m=$('#ctlMode').value,r=$('#ctlRep').value;setBox('#ctlResult','<span class="statusPill">RUNNING</span> NEOS is executing the selected 96-step simulation…');const t=performance.now();try{const d=await j('/api/run?scenario='+encodeURIComponent(s)+'&mode='+m+'&rep='+r+'&'+ctlParams());setBox('#ctlResult',`<span class="statusPill">COMPLETE</span> ${(performance.now()-t)/1000|0}s · peak transformer <b>${Number(d.metrics.peak_tx_loading).toFixed(1)}%</b><br>${jsonPretty(d.metrics)}`);await ensure(s);select(s,false);}catch(e){setBox('#ctlResult',`<span class="statusPill">ERROR</span> ${friendlyError(e)}`)}}
+async function ctlCompare(){const s=$('#ctlScenario').value,r=$('#ctlRep').value;setBox('#ctlResult','<span class="statusPill">RUNNING</span> Comparing all three policies…');try{const d=await j('/api/compare?scenario='+encodeURIComponent(s)+'&rep='+r+'&'+ctlParams());setBox('#ctlResult','<span class="statusPill">COMPLETE</span>'+jsonPretty({scenario:s,uncoordinated:d.uncoordinated,rule_tou:d.rule_tou,coordinated:d.coordinated}));}catch(e){setBox('#ctlResult','<span class="statusPill">ERROR</span> '+friendlyError(e));}}
+async function ctlPower(){setBox('#ctlResult','<span class="statusPill">CHECK</span> Running single OpenDSS AC solve…');try{const d=await j('/api/twin/powerflow?load_kw=400&'+ctlParams());setBox('#ctlResult','<span class="statusPill">AC CHECK</span>'+jsonPretty(d));}catch(e){setBox('#ctlResult','<span class="statusPill">ERROR</span> '+friendlyError(e));}}
+async function runFlex(){setBox('#labResult','<span class="statusPill">RUNNING</span> Calculating estimated flexibility…');try{const d=await j('/api/flexibility?scenario='+$('#ctlScenario').value+'&mode=coordinated&'+ctlParams());setBox('#labResult','<span class="statusPill">ESTIMATED</span>'+jsonPretty({latest:d.latest,count:d.envelopes.length}));}catch(e){setBox('#labResult','<span class="statusPill">ERROR</span> '+friendlyError(e));}}
+async function runTrace(){setBox('#labResult','<span class="statusPill">RUNNING</span> Building decision trace…');try{const d=await j('/api/decision_trace?scenario='+$('#ctlScenario').value+'&mode=coordinated&'+ctlParams());setBox('#labResult','<span class="statusPill">TRACE</span>'+jsonPretty({count:d.count,first:d.traces[0],last:d.traces[d.traces.length-1]}));}catch(e){setBox('#labResult','<span class="statusPill">ERROR</span> '+friendlyError(e));}}
+async function runPhase(){setBox('#labResult','<span class="statusPill">RUNNING</span> Solving phase-aware gateway check…');try{const d=await j('/api/phase?'+ctlParams());setBox('#labResult','<span class="statusPill">PHASE</span>'+jsonPretty(d));}catch(e){setBox('#labResult','<span class="statusPill">ERROR</span> '+friendlyError(e));}}
+async function runIsland(){setBox('#labResult','<span class="statusPill">SIMULATED</span> Running conceptual islanding state machine…');try{const d=await j('/api/islanding');setBox('#labResult','<span class="statusPill">CONCEPT ONLY</span>'+jsonPretty({final_state:d.final_state,transitions:d.transition_log,boundary:d.boundary}));}catch(e){setBox('#labResult','<span class="statusPill">ERROR</span> '+friendlyError(e));}}
+async function runOffline(){try{const d=await j('/api/offline');setBox('#labResult','<span class="statusPill">OFFLINE</span>'+jsonPretty(d));}catch(e){setBox('#labResult','<span class="statusPill">ERROR</span> '+friendlyError(e));}}
+async function queueOverride(){const ev=Math.max(0,Number($('#ctlEV').value)-1); if(ev<0){setBox('#labResult','<span class="statusPill">INPUT</span> Set at least one EV.');return;}try{const d=await j('/api/override?ev_id='+ev+'&scenario='+$('#ctlScenario').value+'&'+ctlParams(),{method:'POST'});setBox('#labResult','<span class="statusPill">QUEUED</span>'+jsonPretty(d));}catch(e){setBox('#labResult','<span class="statusPill">ERROR</span> '+friendlyError(e));}}
+async function runHub(){setBox('#kitResult','<span class="statusPill">RUNNING</span> Community Energy Hub simulation…');try{const d=await j('/api/hub?seed=3');setBox('#kitResult','<span class="statusPill">SIMULATED</span>'+jsonPretty(d));}catch(e){setBox('#kitResult','<span class="statusPill">ERROR</span> '+friendlyError(e));}}
+async function runRural(){setBox('#kitResult','<span class="statusPill">RUNNING</span> Rural scheduler / surplus-router simulation…');try{const d=await j('/api/rural?seed=3&regime='+$('#ctlScenario').value);setBox('#kitResult','<span class="statusPill">SIMULATED</span>'+jsonPretty({config:d.config,arms:d.arms,boundary:d.boundary}));}catch(e){setBox('#kitResult','<span class="statusPill">ERROR</span> '+friendlyError(e));}}
+async function runDiscom(){setBox('#utilityResult','<span class="statusPill">RUNNING</span> DISCOM flexibility / ledger simulation…');try{const d=await j('/api/discom');setBox('#utilityResult','<span class="statusPill">SIMULATED</span>'+jsonPretty({summary:d.ledger_summary,chain_ok:d.chain_ok,min_soc:d.min_soc,reserve_floor_respected:d.reserve_floor_respected,offline_records_synced:d.offline_records_synced,disclaimer:d.disclaimer}));}catch(e){setBox('#utilityResult','<span class="statusPill">ERROR</span> '+friendlyError(e));}}
+async function loadOverrides(){try{const d=await j('/api/overrides');setBox('#utilityResult','<span class="statusPill">LEDGER</span>'+jsonPretty(d));}catch(e){setBox('#utilityResult','<span class="statusPill">ERROR</span> '+friendlyError(e));}}
+function setupCompleteControls() {
+    const sel = $("#ctlScenario");
+    if (!sel || !D.scenarios) return;
+    sel.innerHTML = Object.entries(D.scenarios).map(([k,v]) => `<option value="${k}">${v.title.replace(/^\S+\s/,"")}</option>`).join("");
+    $("#ctlRun").onclick = ctlRun;
+    $("#ctlCompare").onclick = ctlCompare;
+    $("#ctlPower").onclick = ctlPower;
+    document.querySelectorAll("[data-kit]").forEach(b => {
+        b.onclick = () => {
+            document.querySelectorAll("[data-kit]").forEach(x => x.classList.remove("active"));
+            b.classList.add("active");
+            ["urban", "semi", "rural"].forEach(k => {
+                const el = $("#kit" + k[0].toUpperCase() + k.slice(1));
+                if (el) el.style.display = k === b.dataset.kit ? "grid" : "none";
+            });
+        };
+    });
+}
+const oldBoot = boot;
+boot = async function() {
+    await oldBoot();
+    setTimeout(() => setupCompleteControls(), 50);
+};
+</script></body></html>
