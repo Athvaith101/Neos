@@ -201,13 +201,13 @@ def coverage_by_lead(y, P, lead):
 
 
 def fit_operational(series, temp, ghi_cs, kt_true, temp_clim, kt_clim, n_train_days,
-                    n_cal_days, H, seed=0):
+                    n_cal_days, H, seed=0, max_iter=200):
     """Train on days [3, n_train), calibrate on the chronologically later block."""
     tr = daily_origins(3, n_train_days)
     ca = daily_origins(n_train_days, n_train_days + n_cal_days)
     X, Y, L, _ = build_training_set(series, temp, ghi_cs, kt_true, temp_clim, kt_clim, tr, H, seed)
     Xc, Yc, Lc, _ = build_training_set(series, temp, ghi_cs, kt_true, temp_clim, kt_clim, ca, H, seed + 1)
-    return QuantileGBM().fit(X, Y, Xc, Yc, Lc)
+    return QuantileGBM(max_iter=max_iter).fit(X, Y, Xc, Yc, Lc)
 
 
 def evaluate_benchmark(model, series, temp, ghi_cs, kt_true, temp_clim, kt_clim,
