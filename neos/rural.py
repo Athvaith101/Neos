@@ -87,7 +87,7 @@ class RuralNet:
 
 
 def make_grid(cfg: RuralConfig):
-    g = ReferenceGrid(RuralNet(8, cfg.seg_km), cfg.tx_kva, seg_km=cfg.seg_km)
+    g = ReferenceGrid(RuralNet(8, cfg.seg_km), cfg.tx_kva)
     g.set_impedance_scale(cfg.z_scale)
     return g
 
