@@ -125,6 +125,10 @@ class TestFrontendPageRoutes(unittest.TestCase):
                 self.assertEqual(r.status_code, 200)
                 self.assertIn('data-page="' + page + '"', r.text)
 
+    def test_shared_frontend_assets_are_served(self):
+        self.assertEqual(self.c.get('/neos.css').status_code, 200)
+        self.assertEqual(self.c.get('/neos.js').status_code, 200)
+
     def test_unknown_frontend_page_is_not_served(self):
         self.assertEqual(self.c.get('/not-a-page.html').status_code, 404)
 
