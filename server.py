@@ -113,8 +113,8 @@ def scenarios():
 
 
 @app.get("/api/forecast/benchmark")
-def benchmark(n_homes: int = 300, n_ev: int = 60, n_pv: int = 150, n_bess: int = 26, n_comm: int = 10, tx_kva: float = 630.0):
-    cfg = cfg_from(n_homes, n_ev, n_pv, n_bess, n_comm, tx_kva)
+def benchmark(n_homes: int = 300, n_ev: int = 60, n_pv: int = 150, n_bess: int = 26, n_comm: int = 10, tx_kva: float = 630.0, backend: str = "auto"):
+    cfg = cfg_from(n_homes, n_ev, n_pv, n_bess, n_comm, tx_kva, backend)
     w = service.get_world(cfg)
     if 'bench' not in w:
         w['bench'] = service.forecast_benchmark(cfg)
@@ -124,18 +124,20 @@ def benchmark(n_homes: int = 300, n_ev: int = 60, n_pv: int = 150, n_bess: int =
 
 @app.get("/api/run")
 def run(scenario: str = Query("normal"), mode: str = Query("coordinated"), rep: int = 0,
-        n_homes: int = 300, n_ev: int = 60, n_pv: int = 150, n_bess: int = 26, n_comm: int = 10, tx_kva: float = 630.0):
+        n_homes: int = 300, n_ev: int = 60, n_pv: int = 150, n_bess: int = 26, n_comm: int = 10,
+        tx_kva: float = 630.0, backend: str = "auto"):
     check(scenario, mode)
-    cfg = cfg_from(n_homes, n_ev, n_pv, n_bess, n_comm, tx_kva)
+    cfg = cfg_from(n_homes, n_ev, n_pv, n_bess, n_comm, tx_kva, backend)
     m, series, fc = service.run(cfg, scenario, mode, rep=rep)
     return dict(metrics=m, series=series, forecast=service.flat_fc(fc))
 
 
 @app.get("/api/compare")
 def compare(scenario: str = "normal", rep: int = 0, n_homes: int = 300, n_ev: int = 60,
-            n_pv: int = 150, n_bess: int = 26, n_comm: int = 10, tx_kva: float = 630.0):
+            n_pv: int = 150, n_bess: int = 26, n_comm: int = 10, tx_kva: float = 630.0,
+            backend: str = "auto"):
     check(scenario)
-    cfg = cfg_from(n_homes, n_ev, n_pv, n_bess, n_comm, tx_kva)
+    cfg = cfg_from(n_homes, n_ev, n_pv, n_bess, n_comm, tx_kva, backend)
     out = {}
     for mode in MODES:
         m, series, fc = service.run(cfg, scenario, mode, rep=rep)
@@ -220,8 +222,8 @@ def decision_trace(scenario: str = "normal", mode: str = "coordinated", rep: int
 
 @app.get("/api/twin/powerflow")
 def powerflow(load_kw: float = 400.0, n_homes: int = 300, n_ev: int = 60, n_pv: int = 150,
-              n_bess: int = 26, n_comm: int = 10, tx_kva: float = 630.0):
-    cfg = cfg_from(n_homes, n_ev, n_pv, n_bess, n_comm, tx_kva)
+              n_bess: int = 26, n_comm: int = 10, tx_kva: float = 630.0, backend: str = "auto"):
+    cfg = cfg_from(n_homes, n_ev, n_pv, n_bess, n_comm, tx_kva, backend)
     w = service.get_world(cfg)
     inj = {}
     for h in w['nb'].homes:
@@ -344,8 +346,8 @@ def islanding_simulation(outage_start: int = 72, outage_steps: int = 12,
 @app.get("/api/phase")
 def phase_gateway(load_kw: float = 400.0, n_homes: int = 300, n_ev: int = 60,
                   n_pv: int = 150, n_bess: int = 26, n_comm: int = 10,
-                  tx_kva: float = 630.0):
-    cfg = cfg_from(n_homes, n_ev, n_pv, n_bess, n_comm, tx_kva)
+                  tx_kva: float = 630.0, backend: str = "auto"):
+    cfg = cfg_from(n_homes, n_ev, n_pv, n_bess, n_comm, tx_kva, backend)
     w = service.get_world(cfg)
     inj = {}
     for h in w['nb'].homes:
@@ -387,3 +389,26 @@ if WEB.exists():
     @app.get("/")
     def index():
         return FileResponse(WEB / "index.html")
+
+    @app.get("/{page}.html")
+    def frontend_page(page: str):
+        allowed = {"grid", "community", "rural", "utility", "evidence"}
+        if page not in allowed:
+            raise HTTPException(404, detail="page not found")
+        target = WEB / f"{page}.html"
+        if not target.is_file():
+            raise HTTPException(404, detail="page not found")
+        return FileResponse(target)
+
+    @app.get("/{asset}.css")
+    def frontend_css(asset: str):
+        if asset != "neos":
+            raise HTTPException(404, detail="asset not found")
+        return FileResponse(WEB / "neos.css", media_type="text/css")
+
+    @app.get("/{asset}.js")
+    def frontend_js(asset: str):
+        if asset != "neos":
+            raise HTTPException(404, detail="asset not found")
+        return FileResponse(WEB / "neos.js", media_type="application/javascript")
+
