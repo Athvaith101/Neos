@@ -400,3 +400,15 @@ if WEB.exists():
             raise HTTPException(404, detail="page not found")
         return FileResponse(target)
 
+    @app.get("/{asset}.css")
+    def frontend_css(asset: str):
+        if asset != "neos":
+            raise HTTPException(404, detail="asset not found")
+        return FileResponse(WEB / "neos.css", media_type="text/css")
+
+    @app.get("/{asset}.js")
+    def frontend_js(asset: str):
+        if asset != "neos":
+            raise HTTPException(404, detail="asset not found")
+        return FileResponse(WEB / "neos.js", media_type="application/javascript")
+
