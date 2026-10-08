@@ -2,7 +2,7 @@
 from pathlib import Path
 
 root = Path(__file__).parent
-tpl = (root / "dash_template.html").read_text()
+tpl = (root / "dash_template.html").read_text(encoding="utf-8")
 
 LIVE_PANEL = """
   <section class="panel" id="livePanel">
@@ -233,5 +233,5 @@ html = html.replace('<title>Neighbourhood Energy OS — feeder coordination stud
                     '<title>Neighbourhood Energy OS — operator console</title>')
 
 (root / "web").mkdir(exist_ok=True)
-(root / "web" / "index.html").write_text(html)
+(root / "web" / "index.html").write_text(html, encoding="utf-8")
 print("web/index.html", len(html) // 1024, "KB")
