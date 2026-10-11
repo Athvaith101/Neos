@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 var root=document.getElementById('root'), page=root.dataset.page, apiDefault='https://neos-arpj.onrender.com', es=null, abort=null, timer=null, comparisonRuns={};
-var pages=[['overview','Home','/'],['grid','Grid','grid.html'],['community','Community','community.html'],['rural','Rural','rural.html'],['utility','Utility','utility.html'],['evidence','Backend & tests','evidence.html']];
+var pages=[['overview','Home','/'],['grid','Grid','grid.html'],['community','Community','community.html'],['rural','Rural','rural.html'],['utility','Utility','utility.html'],['evidence','Backend & tests','evidence.html'],['hub','Participation','hub.html']];
 function cfg(){try{return Object.assign({n_homes:300,n_ev:60,n_pv:150,n_bess:26,n_comm:10,tx_kva:630,backend:'auto'},JSON.parse(localStorage.getItem('neosConfig')||'{}'))}catch(e){return {n_homes:300,n_ev:60,n_pv:150,n_bess:26,n_comm:10,tx_kva:630,backend:'auto'}}}
 function api(){return (localStorage.getItem('neosApiBase')||'').trim().replace(/\/$/,'')||(location.hostname==='localhost'||location.hostname==='127.0.0.1'?'':apiDefault)}
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEOS — community hub</title>
+<link rel="icon" href="data:,">
+<meta name="description" content="Simulated household energy participation, including offline pledges and clear event outcomes.">
+<link rel="stylesheet" href="./assets/brand.css">
+<link rel="stylesheet" href="./assets/pages.css">
+</head>
+<body>
+<div id="neos-nav-root"></div>
+<div class="page-head"><div class="wrap">
+  <h1>Households take part, even when the phone is offline</h1>
+  <p>Pledge to cut load for a window. Offline pledges wait on the phone and are applied, expired or rejected explicitly when it reconnects. A simulated protocol: there is no phone app or SMS gateway behind it.</p>
+  
+</div></div>
+<div class="wrap"><div id="app"><p class="loading">Loading…</p></div></div>
+<div id="neos-foot-root"></div>
+<script src="./assets/api.js"></script>
+<script src="./assets/vendor/react.production.min.js"></script>
+<script src="./assets/vendor/react-dom.production.min.js"></script>
+<script src="./assets/nav.js"></script>
+<script>NEOS_NAV.render('hub'); NEOS_NAV.renderFoot();</script>
+<script src="./assets/hub.js"></script>
+</body>
+</html>
+
