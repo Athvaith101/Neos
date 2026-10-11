@@ -8,7 +8,7 @@ const NEOS_LOGO = `
 </svg>`;
 
 const NEOS_PAGES = [
-  ['home', 'Home', './index.html'],
+  ['home', 'Home', '/'],
   ['grid', 'Grid', './grid.html'],
   ['community', 'Community', './community.html'],
   ['utility', 'Utility', './utility.html'],
