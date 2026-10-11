@@ -498,6 +498,7 @@ def participation_reset(session_id: str):
 
 if WEB.exists():
     app.mount("/static", StaticFiles(directory=WEB), name="static")
+    app.mount("/assets", StaticFiles(directory=WEB / "assets"), name="assets")
 
     @app.get("/")
     def index():
