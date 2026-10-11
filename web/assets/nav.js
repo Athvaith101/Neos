@@ -32,7 +32,7 @@ const NEOS_NAV = {
             <div class="neos-links">${links}</div>
             <div class="neos-status"><span class="dot"></span><span id="neos-backend-label">checking backend…</span></div>
           </div>
-          <${standalone ? 'span' : 'a href="./index.html"'} class="neos-brand" style="text-decoration:none">
+          <${standalone ? 'span' : 'a href="/"'} class="neos-brand" style="text-decoration:none">
             <span class="word">NEOS</span>${NEOS_LOGO}
           </${standalone ? 'span' : 'a'}>
         </div>
