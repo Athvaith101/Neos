@@ -31,7 +31,7 @@ Endpoints
     GET  /                                   operator console
 """
 from __future__ import annotations
-import asyncio, json, os, queue, threading, time
+import asyncio, json, os, queue, threading, time, re
 from pathlib import Path
 
 from fastapi import FastAPI, Query, Header, HTTPException
@@ -45,7 +45,7 @@ from neos.grid import constraint_report
 from neos.runner import headroom, export_limit
 from neos.seeds import provenance
 from neos.platform import platform_manifest
-from neos import hub, rural, discom, offline, phase, islanding
+from neos import hub, rural, discom, offline, phase, islanding, participation as participation_model
 
 app = FastAPI(title="Neighbourhood Energy OS", version="1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -396,6 +396,106 @@ def evidence():
     return JSONResponse(json.loads(RESULTS.read_text()))
 
 
+
+
+# Browser-local, in-memory sessions for the offline-first participation demo.
+# This data is intentionally ephemeral and is not shared between visitors.
+_PARTICIPATION_HOUSEHOLDS = [f"hh{i:02d}" for i in range(1, 13)]
+_PARTICIPATION_SESSIONS = {}
+_PARTICIPATION_LOCK = threading.Lock()
+_PARTICIPATION_SESSION_LIMIT = 100
+
+
+def _participation_session(session_id):
+    if not re.fullmatch(r"[0-9a-fA-F-]{32,36}", session_id or ""):
+        raise HTTPException(422, detail="invalid session_id")
+    with _PARTICIPATION_LOCK:
+        state = _PARTICIPATION_SESSIONS.get(session_id)
+        if state is None:
+            state = participation_model.Hub(_PARTICIPATION_HOUSEHOLDS, now=0)
+            _PARTICIPATION_SESSIONS[session_id] = state
+        else:
+            _PARTICIPATION_SESSIONS.pop(session_id)
+            _PARTICIPATION_SESSIONS[session_id] = state
+        while len(_PARTICIPATION_SESSIONS) > _PARTICIPATION_SESSION_LIMIT:
+            _PARTICIPATION_SESSIONS.pop(next(iter(_PARTICIPATION_SESSIONS)))
+        return state
+
+
+def _participation_device(hub_state, household):
+    if household not in _PARTICIPATION_HOUSEHOLDS:
+        raise HTTPException(404, detail=f"unknown household '{household}'")
+    return hub_state.devices[household]
+
+
+@app.get("/api/participation")
+def participation_state(session_id: str, start: int = Query(72, ge=0, le=200),
+                        end: int = Query(80, ge=1, le=200)):
+    if end <= start:
+        raise HTTPException(400, detail="end must be after start")
+    state = _participation_session(session_id)
+    return dict(**state.snapshot(), committed=state.committed_kw(start, end), window=[start, end])
+
+
+@app.post("/api/participation/{household}/pledge")
+def participation_pledge(household: str, session_id: str, kw: float = Query(..., gt=0, le=10),
+                          start: int = Query(..., ge=0), end: int = Query(..., ge=1)):
+    state = _participation_session(session_id)
+    ev = _participation_device(state, household).submit(state, "pledge", start, end, kw)
+    return dict(seq=ev.seq, outcome=ev.outcome, reason=ev.reason)
+
+
+@app.post("/api/participation/{household}/withdraw")
+def participation_withdraw(household: str, session_id: str):
+    state = _participation_session(session_id)
+    ev = _participation_device(state, household).submit(state, "withdraw")
+    return dict(seq=ev.seq, outcome=ev.outcome, reason=ev.reason)
+
+
+@app.post("/api/participation/{household}/online")
+def participation_online(household: str, session_id: str, online: bool):
+    state = _participation_session(session_id)
+    device = _participation_device(state, household)
+    device.online = online
+    return dict(hh=household, online=online)
+
+
+@app.post("/api/participation/{household}/sync")
+def participation_sync(household: str, session_id: str):
+    state = _participation_session(session_id)
+    device = _participation_device(state, household)
+    if not device.online:
+        raise HTTPException(409, detail="device is offline; nothing to sync")
+    events = device.sync(state)
+    return dict(synced=[dict(seq=e.seq, outcome=e.outcome, reason=e.reason) for e in events])
+
+
+@app.post("/api/participation/sms")
+def participation_sms(session_id: str, sender: str, text: str = Query(..., max_length=80)):
+    state = _participation_session(session_id)
+    if sender not in _PARTICIPATION_HOUSEHOLDS:
+        raise HTTPException(404, detail="unknown number")
+    reply, _ = state.sms(sender, text)
+    return dict(reply=reply)
+
+
+@app.post("/api/participation/settle")
+def participation_settle(session_id: str, start: int = Query(72, ge=0),
+                          end: int = Query(80, ge=1), fraction: float = Query(1.0, ge=0, le=1.5)):
+    if end <= start:
+        raise HTTPException(400, detail="end must be after start")
+    state = _participation_session(session_id)
+    achieved = {key: (row.pledge["kw"] * fraction if row.pledge else 0.0)
+                for key, row in state.h.items()}
+    return state.settle(start, end, achieved)
+
+
+@app.post("/api/participation/reset")
+def participation_reset(session_id: str):
+    with _PARTICIPATION_LOCK:
+        _PARTICIPATION_SESSIONS.pop(session_id, None)
+    return dict(ok=True, reset=True)
+
 if WEB.exists():
     app.mount("/static", StaticFiles(directory=WEB), name="static")
 
@@ -405,7 +505,7 @@ if WEB.exists():
 
     @app.get("/{page}.html")
     def frontend_page(page: str):
-        allowed = {"grid", "community", "rural", "utility", "evidence"}
+        allowed = {"grid", "community", "rural", "utility", "evidence", "hub"}
         if page not in allowed:
             raise HTTPException(404, detail="page not found")
         target = WEB / f"{page}.html"
