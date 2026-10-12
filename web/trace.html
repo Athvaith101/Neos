@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEOS — decision trace</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="./assets/brand.css">
+<link rel="stylesheet" href="./assets/pages.css">
+</head>
+<body>
+<script src='./assets/api.js'></script>
+<div id="neos-nav-root"></div>
+<div class="page-head"><div class="wrap">
+  <h1>What the controller did, one step at a time</h1>
+  <p>Each record is built from exactly the state the control and safety layers used to make that decision. The physics check is always one of three values — never collapsed into a generic ok/not-ok — because <code>verified</code>, <code>infeasible</code> and <code>solver_failed</code> call for different responses.</p>
+  
+</div></div>
+<div class="wrap"><div id="app"><p class="loading">Loading…</p></div></div>
+<div id="neos-foot-root"></div>
+<script src="./assets/vendor/react.production.min.js"></script>
+<script src="./assets/vendor/react-dom.production.min.js"></script>
+<script src="./assets/nav.js"></script>
+<script>NEOS_NAV.render('trace'); NEOS_NAV.renderFoot();</script>
+<script src="./assets/trace.js"></script>
+</body>
+</html>

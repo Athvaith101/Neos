@@ -121,3 +121,33 @@ class TestConstraintReport(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestImpedanceScale(unittest.TestCase):
+    """Regression: OpenDSSGrid.set_impedance_scale once edited the line code but not the lines
+    already built from it, so the scale was silently ignored on OpenDSS (reference was fine)."""
+
+    def _check(self, cls):
+        nb = small_nb(); g = cls(nb, 200.0)
+        inj = {(nb.nodes[-1][0], p): 12.0 for p in (1, 2, 3)}
+        v1 = g.solve(inj)['vmin']
+        g.set_impedance_scale(2.0)
+        v2 = g.solve(inj)['vmin']
+        self.assertLess(v2, v1 - 0.005, 'doubling the line impedance must lower the end voltage')
+        g.set_impedance_scale(1.0)
+        self.assertAlmostEqual(g.solve(inj)['vmin'], v1, places=5)
+
+    def test_reference(self):
+        self._check(ReferenceGrid)
+
+    @unittest.skipUnless(have_opendss(), 'OpenDSSDirect.py not installed')
+    def test_opendss(self):
+        self._check(OpenDSSGrid)
+
+    @unittest.skipUnless(have_opendss(), 'OpenDSSDirect.py not installed')
+    def test_backends_agree_on_a_scaled_network(self):
+        nb = small_nb(); R = ReferenceGrid(nb, 200.0); O = OpenDSSGrid(nb, 200.0)
+        inj = {(nb.nodes[-1][0], p): 12.0 for p in (1, 2, 3)}
+        for z in (1.0, 1.5, 2.0):
+            R.set_impedance_scale(z); O.set_impedance_scale(z)
+            self.assertAlmostEqual(R.solve(inj)['vmin'], O.solve(inj)['vmin'], delta=2e-3, msg=f'z={z}')

@@ -69,7 +69,10 @@ METRICS = [  # (key, label, lower_is_better)
     ('renewable_utilisation', 'Renewable utilisation', False),
     ('ev_satisfaction', 'EV owners satisfied', False),
     ('steps_verified_pct', 'Steps fully AC-verified (%)', False),
-    ('safety_interventions', 'Safety interventions', True),
+    ('safety_interventions', 'Steps with a safety intervention', True),
+    ('peak_phase_loading', 'Peak single-phase loading (%)', True),
+    ('hours_phase_over_100', 'Hours a phase is above its rating', True),
+    ('imbalance_p95', 'Phase imbalance, 95th percentile', True),
     ('losses_kwh', 'Network losses (kWh)', True),
 ]
 

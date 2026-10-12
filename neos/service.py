@@ -9,7 +9,7 @@ service.py -- the layer between the HTTP API / experiments and the simulation.
     applied until a simulation run has actually consumed them
 """
 from __future__ import annotations
-import threading, time, itertools, os
+import threading, time, itertools
 from collections import OrderedDict
 import numpy as np
 
@@ -34,13 +34,10 @@ SCENARIOS = {
 N_HIST = 40
 TRAIN_DAYS, CAL_DAYS, TEST_DAYS = 26, 6, (32, 39)
 H_FC = WLEN + 8
-MAX_WORLDS = max(1, int(os.getenv('NEOS_WORLD_CACHE_SIZE', '3')))
+MAX_WORLDS = 3
 
 _cache: "OrderedDict" = OrderedDict()
 _cache_lock = threading.Lock()
-# A cache miss can otherwise train multiple identical forecasting models at once
-# when the home page, grid page, or another request cold-starts together.
-_world_build_lock = threading.Lock()
 
 
 def as_cfg(cfg):
@@ -56,33 +53,24 @@ def get_world(cfg):
         if k in _cache:
             _cache.move_to_end(k)
             return _cache[k]
-    # Serialize cold world builds: the runtime is often a small single-instance
-    # service, and duplicate history/model builds can exhaust its memory.
-    with _world_build_lock:
-        with _cache_lock:
-            if k in _cache:
-                _cache.move_to_end(k)
-                return _cache[k]
-        nb = build_neighbourhood(seed=cfg.seed, n_homes=cfg.n_homes, n_ev=cfg.n_ev, n_pv=cfg.n_pv,
-                                 n_bess=cfg.n_bess, n_comm=cfg.n_comm, n_feeders=cfg.n_feeders,
-                                 seg_per_feeder=cfg.seg_per_feeder, tx_kva=cfg.tx_kva)
-        grid = make_grid(nb, cfg.tx_kva, cfg.backend)
-        hist = simulate_period(nb, n_days=N_HIST, seed=stable_seed('hist', cfg.seed), regime='normal')
-        w = hist['weather']
-        temp_clim = np.array([w['temp'][i::T].mean() for i in range(T)])
-        kt_clim = float(w['kt_true'].mean())
-        runtime_max_iter = min(200, max(10, int(os.getenv('NEOS_RUNTIME_MAX_ITER', '200'))))
-        model = F.fit_operational(hist['agg_inflex'], w['temp'], w['ghi_cs'], w['kt_true'],
-                                  temp_clim, kt_clim, TRAIN_DAYS, CAL_DAYS, H_FC,
-                                  seed=stable_seed('gbm', cfg.seed), max_iter=runtime_max_iter)
-        world = dict(nb=nb, grid=grid, hist=hist, cfg=cfg, model=model,
-                     temp_clim=temp_clim, kt_clim=kt_clim,
-                     forecast_max_iter=runtime_max_iter)
-        with _cache_lock:
-            _cache[k] = world
-            while len(_cache) > MAX_WORLDS:
-                _cache.popitem(last=False)
-        return world
+    nb = build_neighbourhood(seed=cfg.seed, n_homes=cfg.n_homes, n_ev=cfg.n_ev, n_pv=cfg.n_pv,
+                             n_bess=cfg.n_bess, n_comm=cfg.n_comm, n_feeders=cfg.n_feeders,
+                             seg_per_feeder=cfg.seg_per_feeder, tx_kva=cfg.tx_kva)
+    grid = make_grid(nb, cfg.tx_kva, cfg.backend)
+    hist = simulate_period(nb, n_days=N_HIST, seed=stable_seed('hist', cfg.seed), regime='normal')
+    w = hist['weather']
+    temp_clim = np.array([w['temp'][i::T].mean() for i in range(T)])
+    kt_clim = float(w['kt_true'].mean())
+    model = F.fit_operational(hist['agg_inflex'], w['temp'], w['ghi_cs'], w['kt_true'],
+                              temp_clim, kt_clim, TRAIN_DAYS, CAL_DAYS, H_FC,
+                              seed=stable_seed('gbm', cfg.seed))
+    world = dict(nb=nb, grid=grid, hist=hist, cfg=cfg, model=model,
+                 temp_clim=temp_clim, kt_clim=kt_clim)
+    with _cache_lock:
+        _cache[k] = world
+        while len(_cache) > MAX_WORLDS:
+            _cache.popitem(last=False)
+    return world
 
 
 def build_forecast(world, scen, seed):
@@ -165,7 +153,7 @@ LEDGER = OverrideLedger()
 
 
 def run(cfg, regime, mode, rep=0, on_step=None, use_ledger=True,
-       want_envelope=False, want_trace=False):
+       want_envelope=False, want_trace=False, net_cut=None, probe=None):
     world, scen, fc = prepare(cfg, regime, rep)
     nb = world['nb']
     extra, consumed = {}, []
@@ -181,7 +169,8 @@ def run(cfg, regime, mode, rep=0, on_step=None, use_ledger=True,
     with world['grid'].lock:
         m, L = run_scenario(nb, world['grid'], scen, fc, mode=mode,
                             seed=stable_seed('run', regime, rep), extra_overrides=extra or None,
-                            on_step=on_step, want_envelope=want_envelope, want_trace=want_trace)
+                            on_step=on_step, want_envelope=want_envelope, want_trace=want_trace,
+                            net_cut=net_cut, probe=probe)
     for e in consumed:
         mine = [x for x in m['override_ledger'] if x['ev'] == e['ev_id']]
         LEDGER.resolve(e, dict(declared=mine, mode=mode), 'applied' if mine else 'not_applied_ev_not_plugged')
@@ -225,5 +214,4 @@ def meta(cfg):
     return dict(homes=len(nb.homes), evs=len(nb.evs), batteries=len(nb.batteries),
                 commercial=len(nb.commercials), pv_kwp=round(nb.pv_kwp_total, 1),
                 tx_kva=nb.tx_kva, nodes=len(nb.nodes), lv_loads=len(nb.nodes) * 3,
-                grid_backend=w['grid'].backend,
-                forecast_fit_iterations=w['forecast_max_iter'])
+                grid_backend=w['grid'].backend)

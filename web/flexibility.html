@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEOS — flexibility envelope</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="./assets/brand.css">
+<link rel="stylesheet" href="./assets/pages.css">
+</head>
+<body>
+<script src='./assets/api.js'></script>
+<div id="neos-nav-root"></div>
+<div class="page-head"><div class="wrap">
+  <h1>How much capability does the neighbourhood have right now?</h1>
+  <p>The Flexibility Envelope reads state the control and safety layers already computed — the controller's own import headroom, the calibrated forecast quantiles, and the exact device limits the dispatcher respects — and combines them into one number per control step.</p>
+  <div class="estimate-banner"><span style="font-size:18px">ⓘ</span><span><b>This is always an estimate, never a guarantee.</b> It can be revised at the next replan, and it is bounded by the same forecast uncertainty and reserve floor the optimiser itself respects.</span></div>
+</div></div>
+<div class="wrap"><div id="app"><p class="loading">Loading…</p></div></div>
+<div id="neos-foot-root"></div>
+<script src="./assets/vendor/react.production.min.js"></script>
+<script src="./assets/vendor/react-dom.production.min.js"></script>
+<script src="./assets/nav.js"></script>
+<script>NEOS_NAV.render('flexibility'); NEOS_NAV.renderFoot();</script>
+<script src="./assets/flexibility.js"></script>
+</body>
+</html>

@@ -60,8 +60,25 @@ def constraint_report(st, vlo=VLIM_LO, vhi=VLIM_HI, tx_limit_pct=100.0,
     return rep
 
 
+IMBALANCE_FLOOR = 0.05      # imbalance is only defined above 5 % of per-phase rating
+
+
+def phase_metrics(phase_kva, tx_kva_rating):
+    """Per-phase transformer loading (% of one third of the rating) and an
+    imbalance indicator = (max-min)/mean of per-phase kVA, DEFINED ONLY when the
+    mean per-phase loading exceeds IMBALANCE_FLOOR (else 0): spread/mean explodes
+    when net current is near zero (e.g. midday PV/load cancellation) and would
+    report a meaningless huge number."""
+    k = np.abs(np.asarray(phase_kva, float))
+    per = tx_kva_rating / 3.0
+    pct = 100.0 * k / per
+    mean = float(k.mean())
+    imb = float((k.max() - k.min()) / mean) if mean > IMBALANCE_FLOOR * per else 0.0
+    return [float(x) for x in pct], imb
+
+
 def _state_from(vmag_pu, tx_p, tx_q, tx_kva_rating, losses_kw, line_pct,
-                converged, vlo=VLIM_LO, vhi=VLIM_HI):
+                converged, vlo=VLIM_LO, vhi=VLIM_HI, phase_kva=None):
     vmag_pu = np.asarray(vmag_pu, float)
     line_pct = np.asarray(line_pct, float)
     finite = bool(vmag_pu.size > 0 and np.all(np.isfinite(vmag_pu))
@@ -72,9 +89,14 @@ def _state_from(vmag_pu, tx_p, tx_q, tx_kva_rating, losses_kw, line_pct,
                     vmax=float('nan'), v_violations=0, tx_kw=float('nan'),
                     tx_kvar=float('nan'), tx_kva=float('nan'), tx_loading=float('nan'),
                     losses_kw=float('nan'), line_loading_max=float('nan'),
-                    n_lines_over=0, n_lv_nodes=int(vmag_pu.size))
+                    n_lines_over=0, n_lv_nodes=int(vmag_pu.size),
+                    tx_phase_kva=[float('nan')] * 3, tx_phase_pct=[float('nan')] * 3,
+                    imbalance=float('nan'))
     s = math.hypot(tx_p, tx_q)
-    return dict(
+    if phase_kva is None:
+        phase_kva = [s / 3.0] * 3
+    ph_pct, imb = phase_metrics(phase_kva, tx_kva_rating)
+    return dict(tx_phase_kva=[float(x) for x in np.abs(phase_kva)], tx_phase_pct=ph_pct, imbalance=imb,
         converged=bool(converged), finite=True,
         vmin=float(vmag_pu.min()), vmax=float(vmag_pu.max()),
         v_violations=int(((vmag_pu < vlo) | (vmag_pu > vhi)).sum()),
@@ -210,9 +232,10 @@ class ReferenceGrid(_GridBase):
                         loss_lines += float(np.real(np.vdot(i, self.Zseg @ i)))
                 loss_tx = float(np.real(self.z_up) * np.sum(np.abs(Itot) ** 2))
                 lp = (np.abs(Ib) / LINE_NORMAMPS * 100.0)[self._mask]
+                S_ph = np.abs(Vlv * np.conj(Itot)) / 1000.0        # kVA per phase, LV bus
                 st = _state_from(vpu, S_prim.real / 1000.0, S_prim.imag / 1000.0,
                                  self.tx_kva, (loss_lines + loss_tx) / 1000.0,
-                                 lp, converged)
+                                 lp, converged, phase_kva=S_ph)
             st['backend'] = self.backend
             return st
 
@@ -286,6 +309,11 @@ class OpenDSSGrid(_GridBase):
             self.z_scale = float(scale)
             self._cmd(f"edit linecode.lv95 r1={0.122 * scale:.6f} x1={0.071 * scale:.6f} "
                       f"r0={0.49 * scale:.6f} x0={0.28 * scale:.6f}")
+            # OpenDSS copies a line code's impedances into each line when the line is created;
+            # editing the code afterwards does NOT propagate. Re-bind every line, or the scale
+            # is silently ignored (found by cross-checking against the reference solver).
+            for nm in self._line_names:
+                self._cmd(f"edit line.{nm} linecode=lv95")
 
     def solve(self, inj):
         with self.lock:
@@ -302,6 +330,9 @@ class OpenDSSGrid(_GridBase):
             p = np.array(self.ctx.CktElement.Powers())
             tx_p = float(p[0] + p[2] + p[4])
             tx_q = float(p[1] + p[3] + p[5])
+            # terminal 2 (LV wye) holds 4 conductors (3 phases + neutral) after the
+            # 4 of terminal 1 -> phases at indices 8..13 (verified against the reference).
+            ph_kva = [math.hypot(p[8 + 2 * i], p[9 + 2 * i]) for i in range(3)]
             loss = self.ctx.Circuit.Losses()
             lp = []
             for nm in self._line_names:
@@ -309,7 +340,7 @@ class OpenDSSGrid(_GridBase):
                 cur = np.array(self.ctx.CktElement.CurrentsMagAng())[0:6:2]
                 lp.append(cur.max() / LINE_NORMAMPS * 100.0)
             st = _state_from(vm, tx_p, tx_q, self.tx_kva, float(loss[0]) / 1000.0,
-                             lp, converged)
+                             lp, converged, phase_kva=ph_kva)
             st['backend'] = self.backend
             return st
 

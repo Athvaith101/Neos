@@ -3,33 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Neighbourhood Energy OS — feeder coordination study</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>NEOS — console</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="./assets/brand.css">
 <style>
 :root{
-  --paper:#F5FAF6; --panel:#FFFFFF; --rule:#D0DFD5; --rule-soft:#E7EFE9;
-  --ink:#193629; --ink-2:#53675B; --ink-3:#84978B;
-  --ok:#2F8B57; --warn:#8E6A27; --bad:#A8493B;
-  --solar:#6FAE82; --store:#26764C; --ev:#4B9A67; --grid:#193629;
-  --plot:#FFFFFF; --shadow:0 2px 10px rgba(28,88,53,.06);
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --paper:#0E1B14; --panel:#15251B; --rule:#2A4032; --rule-soft:#203428;
-    --ink:#E5F0E8; --ink-2:#AEC0B2; --ink-3:#84978B;
-    --ok:#58B77A; --warn:#D0A24C; --bad:#DE7869;
-    --solar:#76C48B; --store:#51A875; --ev:#88B987; --grid:#E5F0E8;
-    --plot:#112117; --shadow:none;
-  }
+  --paper:#FFFFFF; --panel:#FFFFFF; --wash:#F2F8F4; --rule:#DCEAE1; --rule-soft:#ECF5EF;
+  --ink:#0E2A1D; --ink-2:#4B6356; --ink-3:#80988A;
+  --ok:#1B7A4B; --warn:#B8781E; --bad:#AD3B2C;
+  --solar:#D9922B; --store:#2E7D9E; --ev:#7A5BC2; --grid:#0E2A1D;
+  --plot:#FFFFFF; --shadow:0 1px 2px rgba(15,74,44,.06);
 }
 :root[data-theme="dark"]{
-  --paper:#0E1B14; --panel:#15251B; --rule:#2A4032; --rule-soft:#203428;
-  --ink:#E5F0E8; --ink-2:#AEC0B2; --ink-3:#84978B;
-  --ok:#58B77A; --warn:#D0A24C; --bad:#DE7869;
-  --solar:#76C48B; --store:#51A875; --ev:#88B987; --grid:#E5F0E8;
-  --plot:#112117; --shadow:none;
+  --paper:#0E1916; --panel:#14211C; --rule:#2A4036; --rule-soft:#1D2E27;
+  --ink:#E7F3EC; --ink-2:#A6C3B4; --ink-3:#7C9A8A;
+  --ok:#4FBF95; --warn:#E0A63B; --bad:#E2705E;
+  --solar:#E5A643; --store:#6BA8CC; --ev:#A08DD0; --grid:#E7F3EC;
+  --plot:#101C17; --shadow:none;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--paper);color:var(--ink);
@@ -37,7 +27,7 @@ body{margin:0;background:var(--paper);color:var(--ink);
   font-size:15.5px;line-height:1.55;-webkit-font-smoothing:antialiased;
   font-variant-numeric:tabular-nums lining-nums}
 .wrap{max-width:1080px;margin:0 auto;padding:0 20px 72px}
-h1,h2,h3{font-weight:600;letter-spacing:-0.012em;margin:0}
+h1,h2,h3{font-family:"Space Grotesk",var(--font-display,sans-serif);font-weight:600;letter-spacing:-0.012em;margin:0}
 a{color:inherit}
 .mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
 
@@ -47,34 +37,23 @@ header.top{border-bottom:1px solid var(--rule);margin-bottom:26px}
   display:flex;flex-wrap:wrap;gap:22px;align-items:flex-end;justify-content:space-between}
 h1{font-size:clamp(26px,4.4vw,38px);line-height:1.08;max-width:15ch}
 .sub{color:var(--ink-2);margin-top:9px;max-width:56ch;font-size:15px}
-.plate{border:1px solid var(--rule);background:var(--panel);padding:11px 14px;
+.plate{border:1px solid var(--rule);background:var(--wash);border-radius:12px;padding:12px 16px;
   display:grid;grid-template-columns:repeat(2,auto);gap:3px 20px;font-size:13px}
 .plate div{display:flex;gap:8px;justify-content:space-between;color:var(--ink-2)}
 .plate b{font-weight:500;color:var(--ink)}
 
-.brand{display:flex;align-items:center;gap:8px;color:var(--ok);text-decoration:none;
-  font-weight:700;font-size:14px;letter-spacing:.12em;white-space:nowrap}
-.brand svg{width:28px;height:28px;display:block}
-.section-nav{position:sticky;top:0;z-index:20;display:flex;gap:6px;justify-content:center;
-  flex-wrap:wrap;padding:9px 16px;background:color-mix(in srgb,var(--panel) 94%,transparent);
-  border-bottom:1px solid var(--rule);backdrop-filter:blur(12px)}
-.section-nav a{padding:6px 12px;border-radius:999px;color:var(--ink-2);font-size:13px;
-  text-decoration:none;transition:background .16s,color .16s}
-.section-nav a:hover,.section-nav a:focus-visible{background:color-mix(in srgb,var(--ok) 12%,var(--panel));color:var(--ok)}
-#overview,#flexibility,#grid,#forecast,#evidence-page,#decisions{scroll-margin-top:74px}
-@media (max-width:600px){.section-nav{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap}}
 /* ---------- scenario rail ---------- */
 .rail{display:flex;gap:7px;overflow-x:auto;padding-bottom:6px;margin-bottom:18px}
 .chip{flex:0 0 auto;border:1px solid var(--rule);background:var(--panel);color:var(--ink-2);
-  padding:7px 13px;font:inherit;font-size:13.5px;cursor:pointer;border-radius:2px;
+  padding:7px 14px;font:inherit;font-size:13.5px;cursor:pointer;border-radius:999px;
   transition:background .12s,color .12s,border-color .12s}
 .chip:hover{border-color:var(--ink-3);color:var(--ink)}
-.chip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--wash);color:var(--ok);border-color:var(--ok);font-weight:500}
 .chip:focus-visible{outline:2px solid var(--store);outline-offset:2px}
 
 /* ---------- panels ---------- */
-.panel{background:var(--panel);border:1px solid var(--rule);padding:18px 18px 14px;
-  box-shadow:var(--shadow)}
+.panel{background:var(--panel);border:1px solid var(--rule);padding:20px 20px 16px;
+  border-radius:12px;box-shadow:var(--shadow)}
 .panel + .panel{margin-top:14px}
 .ptitle{display:flex;align-items:baseline;justify-content:space-between;gap:14px;
   margin-bottom:3px}
@@ -129,7 +108,7 @@ table.fc td.miss{color:var(--bad)} table.fc td.hit{color:var(--ok)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
-<body>
+<div id="neos-nav-root"></div>
 <header class="top">
   <div class="top-in">
     <div>
@@ -138,23 +117,13 @@ table.fc td.miss{color:var(--bad)} table.fc td.hit{color:var(--ok)}
       chance-constrained optimiser. Every action is re-solved against the AC power flow and labelled verified, infeasible or solver-failed. A research simulator: it commands no equipment.</p>
     </div>
     <div class="plate" id="plate"></div>
-    <a class="brand" href="#home" aria-label="NEOS home">
-      <svg viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M16 2C8.4 2 3 7.8 3 15.4c0 7.9 5.4 13.1 12.3 13.1 7.2 0 12.7-6.1 12.7-14.1V3.7C22.8 3.4 19.1 2 16 2Zm7.2 10.1c-5.8.7-10.1 3.3-13.2 8.2l-2.1-1.4c3.4-5.5 8.4-8.5 15.3-9.4v2.6Z"/></svg>
-      <span>NEOS</span>
-    </a>
   </div>
 </header>
 
-<nav class="section-nav" aria-label="NEOS pages">
-  <a href="#overview">Overview</a><a href="#flexibility">Flexibility</a>
-  <a href="#grid">Grid</a><a href="#forecast">Forecast</a>
-  <a href="#evidence-page">Evidence</a><a href="#decisions">Decision flow</a>
-</nav>
-
-<div class="wrap" id="home">
+<div class="wrap">
   <div class="rail" id="rail" role="group" aria-label="Scenario"></div>
 
-  <section class="panel" id="overview">
+  <section class="panel">
     <div class="ptitle"><h2 id="scTitle"></h2><span id="scDesc"></span></div>
     <div class="switchbar">
       <div class="legend">
@@ -177,7 +146,7 @@ table.fc td.miss{color:var(--bad)} table.fc td.hit{color:var(--ok)}
     </section>
   </div>
 
-  <section class="panel" id="flexibility">
+  <section class="panel">
     <div class="ptitle"><h2>Where the flexibility came from</h2><span>coordinated run</span></div>
     <p class="note">Nobody was switched off. Electric vehicles, home storage and deferrable appliances were
     moved inside the limits their owners had already accepted — into the solar window and the overnight
@@ -191,14 +160,14 @@ table.fc td.miss{color:var(--bad)} table.fc td.hit{color:var(--ok)}
     <div id="flexChart"></div>
   </section>
 
-  <section class="panel" id="grid">
+  <section class="panel">
     <div class="ptitle"><h2>Voltage at the worst node on the feeder</h2><span>statutory band ±6 %</span></div>
     <p class="note">Peak kilowatts are the headline, but voltage is what actually fails first on Indian LV
     feeders. The safety layer treats the lower band as a hard constraint, not a penalty term.</p>
     <div id="voltChart"></div>
   </section>
 
-  <section class="panel" id="forecast">
+  <section class="panel">
     <div class="ptitle"><h2>The forecast the controller was given</h2><span>day-ahead, issued at 12:00</span></div>
     <p class="note">The optimiser never sees a single number. It sizes import headroom from the upper
     demand quantile and the lower solar quantile, so the width of these bands is a safety input — which is
@@ -215,18 +184,21 @@ table.fc td.miss{color:var(--bad)} table.fc td.hit{color:var(--ok)}
     <div class="scroll"><table class="fc" id="fcTable"></table></div>
   </section>
 
-  <section class="panel" id="evidence-page">
+  <section class="panel">
     <div class="ptitle"><h2>Evidence, not a single run</h2><span>paired · multi-seed · held-out</span></div>
     <div id="evidence"></div>
   </section>
 
-  <section class="panel" id="decisions">
+  <section class="panel">
     <div class="ptitle"><h2>How a decision is made</h2><span>every 30 minutes</span></div>
     <div id="pipe"></div>
   </section>
 
   <p class="foot" id="foot"></p>
 </div>
+<div id="neos-foot-root"></div>
+<script src="./assets/nav.js"></script>
+<script>NEOS_NAV.render('console'); NEOS_NAV.renderFoot();</script>
 
 <script>
 const D = __DATA__;

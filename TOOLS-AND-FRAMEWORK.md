@@ -261,3 +261,7 @@ Print this and keep it in front of you.
 - That reinforcement learning currently beats the optimiser — we have not built it.
 - That the load and EV behaviour models are validated against Indian measurements
   yet. (Tier 3 above is how that stops being true.)
+
+
+## v4 additions
+`neos/phase.py`, `neos/discom.py`, `neos/rural.py`, `platform_runner.py`, `validate_platform.py`, `tests/test_platform.py`. Build the TSX pages with `node build_tsx.js` (needs `npm i --no-save @babel/standalone typescript`).

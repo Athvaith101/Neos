@@ -1,2 +1,156 @@
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f5faf6"><title>NEOS — Backend and evidence</title><link rel="stylesheet" href="neos.css"></head><body><div id="root" data-page="evidence"></div><script defer src="neos.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEOS — evidence</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="./assets/brand.css">
+<style>
+.page-head{ padding:48px 24px 8px; }
+.page-head h1{ font-size:32px; margin-bottom:12px; max-width:20ch; }
+.page-head p{ font-size:15.5px; }
+section.block{ padding:36px 24px; }
+section.block h2{ font-size:22px; margin-bottom:16px; }
+.fact-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; margin-bottom:8px; }
+@media (min-width:760px){ .fact-grid{ grid-template-columns:repeat(4,1fr); } }
+.fact{ background:#fff; padding:18px; }
+.fact span{ display:block; font-size:11.5px; color:var(--ink-faint); margin-bottom:6px; }
+.fact b{ font-family:var(--font-display); font-size:24px; color:var(--green-deep); }
+.built-list, .gap-list{ margin:0; padding-left:0; list-style:none; }
+.built-list li, .gap-list li{ display:flex; gap:10px; padding:9px 0; border-bottom:1px solid var(--soft-2); font-size:14px; color:var(--ink); }
+.built-list li:last-child, .gap-list li:last-child{ border-bottom:0; }
+.built-list .mk{ color:var(--green); flex:none; }
+.gap-list .mk{ color:var(--amber); flex:none; }
+.limitations{ font-size:14px; color:var(--ink-soft); line-height:1.8; }
+.loading{ color:var(--ink-faint); font-size:13.5px; }
+</style>
+</head>
+<body>
+<script src='./assets/api.js'></script>
+<div id="neos-nav-root"></div>
+
+<div class="page-head">
+  <div class="wrap">
+    <h1>What's actually verified here</h1>
+    <p>This page states plainly what is tested, what is verified against real physics, and what
+    the wider roadmap still leaves undone. No number on this site is meant to outrun what's on
+    this page.</p>
+  </div>
+</div>
+
+<section class="block">
+  <div class="wrap">
+    <div class="fact-grid">
+      <div class="fact"><span>Automated tests passing</span><b id="f-tests">…</b></div>
+      <div class="fact"><span>Grid solver backend in use</span><b id="f-backend">…</b></div>
+      <div class="fact"><span>Cross-backend checks (reference vs OpenDSS)</span><b>validate_platform.py</b></div>
+      <div class="fact"><span>DISCOM promises kept, held-out</span><b id="f-kept">…</b></div>
+    </div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap grid cols-2">
+    <div>
+      <h2>Built and tested</h2>
+      <ul class="built-list" id="built">
+        <li><span class="mk">✓</span><span>Unbalanced three-phase AC power flow (OpenDSS), cross-checked against a NumPy reference solver</span></li>
+        <li><span class="mk">✓</span><span>Chance-constrained LP-MPC optimiser with a transparent rule-based and no-coordination baseline for comparison</span></li>
+        <li><span class="mk">✓</span><span>Safety layer that verifies every action: VERIFIED / INFEASIBLE / SOLVER_FAILED, never collapsed into ok/not-ok</span></li>
+        <li><span class="mk">✓</span><span>Causal, conformal-calibrated day-ahead forecasting with a documented accuracy benchmark</span></li>
+        <li><span class="mk">✓</span><span>An auditable override ledger: user requests are queued and applied, never silently acknowledged and ignored</span></li>
+        <li><span class="mk">✓</span><span>Flexibility Envelope: per-step mobilisable-capability estimate, explicitly labelled ESTIMATED</span></li>
+        <li><span class="mk">✓</span><span>Decision Trace: a deterministic, human-readable record of every control step's reasoning</span></li>
+        <li><span class="mk">✓</span><span>A three-arm stress comparison: no coordination, battery-only, and full NEOS control, on identical seeded scenarios</span></li>
+      </ul>
+    </div>
+    <div>
+      <h2>Explicitly not built</h2>
+      <ul class="gap-list" id="gaps">
+        <li><span class="mk">—</span><span>Hardware-in-the-loop: nothing here commands real equipment</span></li>
+        <li><span class="mk">—</span><span>Multi-agent reinforcement learning</span></li>
+        <li><span class="mk">—</span><span>A deployed community hub: the hub is a simulated offline-pledging demo (no phone app, SMS gateway or authentication; session-keyed JSON storage) and not the shared-battery energy hub; the rural kit has no field hardware</span></li>
+        <li><span class="mk">—</span><span>Island dynamics, black start, protection coordination, DISCOM settlement</span></li>
+        <li><span class="mk">—</span><span>Real feeder data — all demand and weather are synthetic</span></li>
+        <li><span class="mk">—</span><span>Structural digital-twin mismatch calibration (one physical parameter is calibrated; structural model error is not)</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap">
+    <h2>Platform studies (OpenDSS-verified)</h2>
+    <div id="platform" class="panel panel-pad"><p class="loading">Loading…</p></div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap">
+    <h2>Limitations, from the current results file</h2>
+    <div id="limitations" class="limitations"><p class="loading">Loading…</p></div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap">
+    <h2>Provenance of the current results</h2>
+    <div id="provenance" class="panel panel-pad"><p class="loading">Loading…</p></div>
+  </div>
+</section>
+
+<div id="neos-foot-root"></div>
+<script src="./assets/nav.js"></script>
+<script>
+NEOS_NAV.render('evidence'); NEOS_NAV.renderFoot();
+
+fetch('/api/meta').then(r => r.json()).then(d => {
+  document.getElementById('f-backend').textContent = d.grid_backend;
+  const t = d.test_status; document.getElementById('f-tests').textContent = t ? `${t.passed} / ${t.total}` : 'not recorded (run run_tests.py)';
+}).catch(() => { document.getElementById('f-backend').textContent = '—'; });
+
+fetch('/api/platform/evidence').then(r => r.json()).then(d => {
+  const f = (x,n=2) => (x==null||isNaN(x)) ? '—' : Number(x).toFixed(n);
+  const S = d.discom.summary, rows = [];
+  document.getElementById('f-kept').textContent = S.promise_kept + ' / ' + S.n_requests;
+  const ho = d.rural.held_out;
+  for (const [k,v] of Object.entries(ho)) {
+    rows.push(`<tr><td>${v.title||k}</td><td>${f(v.clinic_unserved_kwh.naive.mean)} → ${f(v.clinic_unserved_kwh.neos.mean)}</td>`+
+      `<td>${f(v.tier2_unserved_kwh.naive.mean)} → ${f(v.tier2_unserved_kwh.neos.mean)}</td>`+
+      `<td>${f(v.shops_unserved_kwh.naive.mean)} → ${f(v.shops_unserved_kwh.neos.mean)}</td>`+
+      `<td>${f(v.cold_chain_hours_above_8C.naive.mean)} → ${f(v.cold_chain_hours_above_8C.neos.mean)}</td></tr>`);
+  }
+  document.getElementById('platform').innerHTML =
+    `<h3 style="margin-top:0">Rural kit, held-out villages (tier-blind → NEOS, kWh unserved / hours)</h3>
+     <div style="overflow-x:auto"><table class="data"><tr><th>Scenario</th><th>Clinic</th><th>Tier 2</th><th>Shops</th><th>Cold chain &gt;8 °C h</th></tr>${rows.join('')}</table></div>
+     <p>NEOS protects clinic and tier 2 by shedding shops first; in a poor-sun outage the shops pay for it. Island is a simulated grid-forming source.</p>
+     <h3>DISCOM request interface, held-out neighbourhoods</h3>
+     <p>${S.promise_kept} of ${S.n_requests} promises kept; mean delivery ${f(S.mean_ratio_vs_promise*100,0)}% of promise, minimum ${f(S.min_ratio_vs_promise*100,0)}%.
+     The margin calibrated on development seeds did not transfer, so the promise is an estimate and never a guarantee. All steps verified: ${f(S.min_verified_pct,0)}%.
+     Oversized (100 kW) requests were rejected rather than promised.</p>
+     <h3>Phase view</h3>
+     <p>Single-phase loading can reach 102% of a phase's share while the total reads 98.9%. Coordination lowered the peak to 74% in the test case; NEOS does not fix imbalance itself.</p>`;
+  const L = document.getElementById('limitations');
+  L.insertAdjacentHTML('beforeend','<ul style="padding-left:18px;margin:8px 0 0">'+(d.limitations||[]).map(l=>`<li style="margin-bottom:8px">${l}</li>`).join('')+'</ul>');
+}).catch(()=>{document.getElementById('platform').innerHTML='<p class="loading">results_platform.json not reachable.</p>';});
+
+fetch('/api/evidence').then(r => r.json()).then(d => {
+  const lim = d.limitations || [];
+  document.getElementById('limitations').innerHTML = lim.length
+    ? '<ul style="padding-left:18px;margin:0">' + lim.map(l => `<li style="margin-bottom:8px">${l}</li>`).join('') + '</ul>'
+    : '<p class="loading">No limitations list in results.json.</p>';
+
+  const p = d.provenance || {};
+  const rows = Object.entries(p).map(([k,v]) =>
+    `<tr><th>${k}</th><td>${typeof v === 'object' ? JSON.stringify(v) : v}</td></tr>`).join('');
+  document.getElementById('provenance').innerHTML = rows
+    ? `<table class="data">${rows}</table>`
+    : '<p class="loading">No provenance recorded in results.json.</p>';
+}).catch(() => {
+  document.getElementById('limitations').innerHTML = '<p class="loading">results.json not reachable — run <code>python experiments.py</code> first.</p>';
+  document.getElementById('provenance').innerHTML = '';
+});
+</script>
+</body>
+</html>

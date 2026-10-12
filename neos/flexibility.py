@@ -100,6 +100,47 @@ def _load_flexibility(obs_defer):
               for f in obs_defer.values() if f['rem'] > 1e-6)
 
 
+def flexibility_used_kw(obs, ev_draw, bd_draw, fl_draw, soc_min=BATT_SOC_MIN_RESERVE):
+    """How much of the flexibility the Envelope considers 'available' was
+    actually exercised this step, given a specific dispatch (either the
+    controller's PROPOSED dispatch, or the safety layer's VERIFIED one --
+    called with each separately to produce `flexibility_requested_kw` and
+    `flexibility_delivered_kw`; the difference between the two calls is
+    `flexibility_shortfall_kw`, i.e. how much the safety layer took back).
+
+    Definition, matching compute_envelope's own component functions exactly
+    so this is not a second, divergent notion of 'flexibility':
+      - EV:  how much LESS than its available room a non-hard EV drew
+             (deferring/reducing charging helps during an import-stress step)
+      - battery: discharge power actually injected (bd_draw), which is
+             directly the help a battery can offer
+      - appliance: how much LESS than its deferrable capability an appliance
+             drew (not running it this step is the flexibility)
+    ev_draw / bd_draw / fl_draw: {id: kW actually proposed/dispatched}, i.e.
+    Proposal.ev / Proposal.bd / Proposal.fl for 'requested', or the verified
+    post-safety ev_p / bd / fl dicts for 'delivered'.
+    """
+    ev_used = 0.0
+    for i, o in obs['ev'].items():
+        if o.get('hard'):
+            continue
+        room_kw = max(0.0, min(o['p_max'], (1.0 - o['soc']) * o['cap'] / (DT * EV_ETA)))
+        drawn = ev_draw.get(i, 0.0)
+        ev_used += max(0.0, room_kw - drawn)
+
+    batt_used = sum(bd_draw.get(i, 0.0) for i, o in obs['batt'].items() if o.get('available'))
+
+    fl_used = 0.0
+    for i, f in obs['defer'].items():
+        if f['rem'] <= 1e-6:
+            continue
+        cap_kw = max(0.0, min(f['p_max'], f['rem'] / DT))
+        drawn = fl_draw.get(i, 0.0)
+        fl_used += max(0.0, cap_kw - drawn)
+
+    return ev_used + batt_used + fl_used
+
+
 def compute_envelope(k, t, obs, pst, P_head, forecast,
                      mpc_every=2, soc_min=BATT_SOC_MIN_RESERVE):
     """

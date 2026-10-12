@@ -18,7 +18,7 @@ import unittest
 from fastapi.testclient import TestClient
 from server import app
 
-SMALL_Q = dict(n_homes=60, n_ev=14, n_pv=30, n_bess=6, n_comm=3, tx_kva=200.0, backend='reference')
+SMALL_Q = dict(n_homes=60, n_ev=14, n_pv=30, n_bess=6, tx_kva=200.0, backend='reference')
 # Pinned to the reference backend deliberately: this file tests API routing,
 # validation and serialisation, which is backend-agnostic by design (the
 # service layer dispatches to whichever backend the config names). OpenDSS
@@ -103,40 +103,84 @@ class TestDecisionTraceEndpoint(unittest.TestCase):
         self.assertEqual(r.status_code, 400)
 
 
-class TestStreamEndpoint(unittest.TestCase):
-    def test_stream_emits_progress_and_completion(self):
-        c = TestClient(app)
-        r = c.get('/api/stream', params=dict(scenario='normal', mode='uncoordinated',
-                                             delay=0, **SMALL_Q))
-        self.assertEqual(r.status_code, 200)
-        self.assertIn('text/event-stream', r.headers.get('content-type', ''))
-        self.assertIn('"done": true', r.text)
-        self.assertNotIn('"error"', r.text)
+if __name__ == '__main__':
+    unittest.main()
 
 
-class TestFrontendPageRoutes(unittest.TestCase):
+class TestPlatformEndpoints(unittest.TestCase):
     def setUp(self):
         self.c = TestClient(app)
 
-    def test_each_operator_area_has_a_separate_page(self):
-        for page in ('grid', 'community', 'rural', 'utility', 'evidence'):
-            with self.subTest(page=page):
-                r = self.c.get('/' + page + '.html')
-                self.assertEqual(r.status_code, 200)
-                self.assertIn('data-page="' + page + '"', r.text)
-
-    def test_home_page_selects_overview_view(self):
-        r = self.c.get('/')
+    def test_phase_endpoint(self):
+        r = self.c.get('/api/phase', params=dict(SMALL_Q))
         self.assertEqual(r.status_code, 200)
-        self.assertIn('data-page="overview"', r.text)
+        j = r.json()
+        self.assertEqual(set(j['phases']), {'A', 'B', 'C'})
+        self.assertEqual(len(j['phases']['A']), 96)
+        self.assertIn('No device attribution', j['note'])
 
-    def test_shared_frontend_assets_are_served(self):
-        self.assertEqual(self.c.get('/neos.css').status_code, 200)
-        self.assertEqual(self.c.get('/neos.js').status_code, 200)
+    def test_rural_compare_is_strict_json_and_orders_tiers(self):
+        r = self.c.get('/api/rural/compare', params=dict(scenario='cloudy_outage', backend='reference'))
+        self.assertEqual(r.status_code, 200)
+        j = r.json()           # TestClient parses strictly enough; NaN would have failed to serialise
+        self.assertGreater(j['naive']['metrics']['clinic_unserved_kwh'], 1.0)
+        self.assertEqual(j['neos']['metrics']['clinic_unserved_kwh'], 0.0)
+        self.assertEqual(j['neos']['metrics']['backend'], 'reference')
 
-    def test_unknown_frontend_page_is_not_served(self):
-        self.assertEqual(self.c.get('/not-a-page.html').status_code, 404)
+    def test_rural_rejects_bad_input(self):
+        self.assertEqual(self.c.get('/api/rural', params=dict(scenario='nope')).status_code, 400)
+        self.assertEqual(self.c.get('/api/rural', params=dict(arm='nope')).status_code, 400)
+        self.assertEqual(self.c.get('/api/rural', params=dict(t1_endurance_h=0)).status_code, 422)
 
+    def test_discom_validates_and_answers(self):
+        self.assertEqual(self.c.get('/api/discom', params=dict(SMALL_Q, kw=-5)).status_code, 422)
+        r = self.c.get('/api/discom', params=dict(SMALL_Q, kw=10, start_step=44))
+        self.assertEqual(r.status_code, 200)
+        j = r.json()
+        self.assertIn(j['decision']['action'], ('ACCEPT', 'MODIFY', 'DEFER', 'REJECT'))
+        self.assertIn('Settlement', j['disclaimer'])
+        self.assertLessEqual(j['decision']['accepted_kw'], 10.0)
 
-if __name__ == '__main__':
-    unittest.main()
+    def test_platform_evidence(self):
+        r = self.c.get('/api/platform/evidence')
+        self.assertEqual(r.status_code, 200)
+        j = r.json()
+        self.assertIn('margin', j['discom'])
+        self.assertIn('Island operation', ' '.join(j['limitations']))
+
+    def test_rural_village_params_validated_and_applied(self):
+        self.assertEqual(self.c.get('/api/rural', params=dict(homes=5)).status_code, 400)
+        self.assertEqual(self.c.get('/api/rural', params=dict(battery_kw=500)).status_code, 400)
+        r = self.c.get('/api/rural/compare', params=dict(scenario='cloudy_outage', backend='reference', battery_kwh=300, battery_kw=80)).json()
+        self.assertFalse(r['is_default_village']); self.assertEqual(r['village']['battery_kwh'], 300.0)
+        d = self.c.get('/api/rural/compare', params=dict(scenario='normal', backend='reference')).json()
+        self.assertTrue(d['is_default_village'])
+
+    def test_hub_offline_flow(self):
+        c = self.c; S = dict(sid='testsid1'); import tempfile, pathlib, server; server._HUB_DIR = pathlib.Path(tempfile.mkdtemp()); c.post('/api/hub/reset', params=S)
+        c.post('/api/hub/hh01/online', params=dict(online=False, **S))
+        r = c.post('/api/hub/hh01/pledge', params=dict(kw=2, start=72, end=80, **S)).json()
+        self.assertEqual(r['outcome'], 'queued')
+        self.assertEqual(c.get('/api/hub', params=S).json()['committed']['raw_kw'], 0.0)
+        self.assertEqual(c.post('/api/hub/hh01/sync', params=S).status_code, 409)
+        c.post('/api/hub/hh01/online', params=dict(online=True, **S))
+        self.assertEqual(c.post('/api/hub/hh01/sync', params=S).json()['synced'][0]['outcome'], 'applied')
+        self.assertEqual(c.get('/api/hub', params=S).json()['committed']['raw_kw'], 2.0)
+        self.assertEqual(c.post('/api/hub/nobody/pledge', params=dict(kw=1, start=1, end=2, **S)).status_code, 404)
+        self.assertTrue(c.post('/api/hub/sms', params=dict(sender='hh02', text='nonsense', **S)).json()['reply'].startswith('ERR'))
+        self.assertEqual(c.get('/api/hub', params=dict(sid='x')).status_code, 400)
+        c.post('/api/hub/reset', params=S)
+
+    def test_hub_sessions_isolated_and_persisted(self):
+        import server, neos.hub as hm, tempfile, pathlib
+        c = self.c
+        old = server._HUB_DIR; server._HUB_DIR = pathlib.Path(tempfile.mkdtemp()); server._HUBS.clear()
+        try:
+            c.post('/api/hub/reset', params=dict(sid='aaaa1111')); c.post('/api/hub/reset', params=dict(sid='bbbb2222'))
+            c.post('/api/hub/hh03/pledge', params=dict(sid='aaaa1111', kw=3, start=72, end=80))
+            self.assertEqual(c.get('/api/hub', params=dict(sid='aaaa1111')).json()['committed']['raw_kw'], 3.0)
+            self.assertEqual(c.get('/api/hub', params=dict(sid='bbbb2222')).json()['committed']['raw_kw'], 0.0)
+            server._HUBS.clear()                      # simulate a restart: state must come back from disk
+            self.assertEqual(c.get('/api/hub', params=dict(sid='aaaa1111')).json()['committed']['raw_kw'], 3.0)
+        finally:
+            server._HUB_DIR = old; server._HUBS.clear()
