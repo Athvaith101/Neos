@@ -220,7 +220,19 @@ function Tile(p) {
     } : undefined
   }, p.value), p.sub && /*#__PURE__*/React.createElement("em", null, p.sub));
 }
-const post = u => fetch(u, {
+const SID = (() => {
+  try {
+    let s = localStorage.getItem('neos_hub_sid');
+    if (!s) {
+      s = 'v' + Math.random().toString(36).slice(2, 12);
+      localStorage.setItem('neos_hub_sid', s);
+    }
+    return s;
+  } catch {
+    return 'v' + Math.random().toString(36).slice(2, 12);
+  }
+})();
+const post = u => fetch(u + (u.includes('?') ? '&' : '?') + 'sid=' + SID, {
   method: 'POST'
 }).then(async r => ({
   ok: r.ok,
@@ -239,7 +251,7 @@ function HubPage() {
     data: d,
     loading,
     error
-  } = useApi(`/api/participation?start=${start}&end=${end}&_=${tick}`);
+  } = useApi(`/api/hub?sid=${SID}&start=${start}&end=${end}&_=${tick}`);
   const act = async (u, label) => {
     const r = await post(u);
     setMsg(r.ok ? `${label}: ${JSON.stringify(r.body)}` : `${label} failed: ${r.body.detail || 'error'}`);
@@ -249,7 +261,7 @@ function HubPage() {
   const q = `start=${start}&end=${end}`;
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
     className: "scope"
-  }, d?.disclaimer ?? 'Simulated protocol.', " Steps are 15 minutes: step 72 is 18:00."), /*#__PURE__*/React.createElement("div", {
+  }, d?.disclaimer ?? 'Simulated protocol.', " This is an offline-pledging demo, not the shared-battery energy hub. Your data is kept under a private id stored in this browser (not a login, no authentication) and saved on the server. Steps are 15 minutes: step 72 is 18:00."), /*#__PURE__*/React.createElement("div", {
     className: "controls"
   }, /*#__PURE__*/React.createElement("label", {
     htmlFor: "hh"
@@ -306,18 +318,18 @@ function HubPage() {
     }
   }), /*#__PURE__*/React.createElement("button", {
     className: "btn",
-    onClick: () => act(`/api/participation/${hh}/pledge?kw=${kw}&start=${start}&end=${end}`, 'Pledge')
+    onClick: () => act(`/api/hub/${hh}/pledge?kw=${kw}&start=${start}&end=${end}`, 'Pledge')
   }, "Pledge"), /*#__PURE__*/React.createElement("button", {
     className: "btn ghost",
-    onClick: () => act(`/api/participation/${hh}/withdraw`, 'Withdraw')
+    onClick: () => act(`/api/hub/${hh}/withdraw`, 'Withdraw')
   }, "Withdraw")), /*#__PURE__*/React.createElement("div", {
     className: "controls"
   }, /*#__PURE__*/React.createElement("span", null, hh, " phone is ", /*#__PURE__*/React.createElement("b", null, me?.online ? 'online' : 'OFFLINE'), ", ", me?.queued ?? 0, " queued"), /*#__PURE__*/React.createElement("button", {
     className: "btn ghost",
-    onClick: () => act(`/api/participation/${hh}/online?online=${!(me?.online ?? true)}`, 'Connectivity')
+    onClick: () => act(`/api/hub/${hh}/online?online=${!(me?.online ?? true)}`, 'Connectivity')
   }, me?.online ? 'Go offline' : 'Come online'), /*#__PURE__*/React.createElement("button", {
     className: "btn ghost",
-    onClick: () => act(`/api/participation/${hh}/sync`, 'Sync'),
+    onClick: () => act(`/api/hub/${hh}/sync`, 'Sync'),
     disabled: !me?.online
   }, "Sync queue"), /*#__PURE__*/React.createElement("label", {
     htmlFor: "sms"
@@ -334,7 +346,7 @@ function HubPage() {
     }
   }), /*#__PURE__*/React.createElement("button", {
     className: "btn ghost",
-    onClick: () => act(`/api/participation/sms?sender=${hh}&text=${encodeURIComponent(sms)}`, 'SMS')
+    onClick: () => act(`/api/hub/sms?sender=${hh}&text=${encodeURIComponent(sms)}`, 'SMS')
   }, "Send")), msg && /*#__PURE__*/React.createElement("p", {
     className: "hint",
     role: "status"
@@ -379,13 +391,13 @@ function HubPage() {
     }
   }, /*#__PURE__*/React.createElement("button", {
     className: "btn ghost",
-    onClick: () => act(`/api/participation/settle?${q}&fraction=1`, 'Settle at 100%')
+    onClick: () => act(`/api/hub/settle?${q}&fraction=1`, 'Settle at 100%')
   }, "Simulate delivery at 100%"), /*#__PURE__*/React.createElement("button", {
     className: "btn ghost",
-    onClick: () => act(`/api/participation/settle?${q}&fraction=0.5`, 'Settle at 50%')
+    onClick: () => act(`/api/hub/settle?${q}&fraction=0.5`, 'Settle at 50%')
   }, "Simulate delivery at 50%"), /*#__PURE__*/React.createElement("button", {
     className: "btn ghost",
-    onClick: () => act('/api/participation/reset', 'Reset')
+    onClick: () => act('/api/hub/reset', 'Reset')
   }, "Reset hub")), /*#__PURE__*/React.createElement("p", {
     className: "hint",
     style: {
@@ -409,4 +421,3 @@ function HubPage() {
 }
 mount(/*#__PURE__*/React.createElement(HubPage, null));
 })();
-

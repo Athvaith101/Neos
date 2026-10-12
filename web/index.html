@@ -1,2 +1,164 @@
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f5faf6"><title>NEOS — Energy operations</title><link rel="stylesheet" href="neos.css"></head><body><div id="root" data-page="overview"></div><script defer src="neos.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEOS — Neighbourhood Energy Operating System</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="./assets/brand.css">
+<style>
+.hero{
+  background: linear-gradient(180deg, var(--green-deep) 0%, #124A30 58%, #0E2A1D 100%);
+  color:#EAF6EE; padding:76px 24px 84px; position:relative; overflow:hidden;
+}
+.hero-in{ max-width:1120px; margin:0 auto; position:relative; z-index:1; }
+.hero-mark{ width:64px; height:64px; margin-bottom:28px; }
+.hero-mark svg path{ stroke:#6FE09B; }
+.hero-mark svg circle{ fill:#C9F5D8; }
+.hero h1{ color:#fff; font-size:clamp(34px,5.2vw,54px); line-height:1.05; max-width:16ch; margin-bottom:18px; }
+.hero p.lede{ color:#CBE7D4; font-size:18px; max-width:52ch; line-height:1.55; margin-bottom:30px; }
+.hero-cta{ display:flex; gap:12px; flex-wrap:wrap; }
+.hero .btn.ghost{ border-color:rgba(255,255,255,.35); color:#fff; }
+.hero .btn.ghost:hover{ background:rgba(255,255,255,.1); }
+.hero-grid{
+  position:absolute; inset:0; opacity:.14;
+  background-image:
+    linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px);
+  background-size:42px 42px; mask-image: radial-gradient(ellipse at 70% 30%, black 0%, transparent 65%);
+}
+
+.stats{ padding:40px 24px 8px; }
+.stat-row{ display:grid; grid-template-columns:repeat(2,1fr); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; }
+@media (min-width:760px){ .stat-row{ grid-template-columns:repeat(4,1fr); } }
+.stat{ background:#fff; padding:22px 20px; }
+.stat b{ display:block; font-family:var(--font-display); font-size:28px; color:var(--green-deep); letter-spacing:-0.01em; }
+.stat span{ display:block; font-size:12.5px; color:var(--ink-faint); margin-top:4px; }
+
+section.section{ padding:56px 24px; }
+section.section h2{ font-size:26px; margin-bottom:10px; }
+section.section > .wrap > p{ font-size:15.5px; margin-bottom:34px; }
+
+.cards{ gap:16px; }
+.card{ padding:22px; display:flex; flex-direction:column; gap:10px; height:100%; }
+.card h3{ font-size:17px; }
+.card p{ font-size:14px; margin-bottom:6px; flex:1; }
+.card a.go{ font-size:13.5px; font-weight:600; color:var(--green-deep); }
+.card .kicker{ font-size:12px; color:var(--ink-faint); font-family:var(--font-mono); }
+
+.honest{ background:var(--soft); }
+.honest ul{ margin:0; padding-left:18px; color:var(--ink-soft); font-size:14.5px; line-height:1.9; }
+.honest li{ margin-bottom:2px; }
+</style>
+</head>
+<body>
+<script src='./assets/api.js'></script>
+<div id="neos-nav-root"></div>
+
+<header class="hero">
+  <div class="hero-grid" aria-hidden="true"></div>
+  <div class="hero-in">
+    <div class="hero-mark" id="hero-mark"></div>
+    <h1>A neighbourhood's power, coordinated safely, verified by physics.</h1>
+    <p class="lede">NEOS forecasts demand and solar, plans electric vehicle charging, battery
+    use and flexible appliances across a feeder, then checks every single action against a
+    real unbalanced AC power flow before it counts as safe. Nothing here commands real
+    equipment — it's a tested, OpenDSS-verified simulation you can read end to end.</p>
+    <div class="hero-cta">
+      <a class="btn" href="./console.html">Open the console</a>
+      <a class="btn ghost" href="./evidence.html">See what's verified</a>
+    </div>
+  </div>
+</header>
+
+<section class="stats">
+  <div class="wrap">
+    <div class="stat-row" id="stat-row">
+      <div class="stat"><b id="s-backend">…</b><span>grid solver in use right now</span></div>
+      <div class="stat"><b id="s-homes">…</b><span>homes on the modelled feeder</span></div>
+      <div class="stat"><b id="s-peak">20–34 pp</b><span>lower peak transformer loading, coordinated vs none</span></div>
+      <div class="stat"><b id="s-tests">71</b><span>automated tests passing</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <h2>Four ways to look at the same system</h2>
+    <p>Each page below reads from the same live simulation. There is no separate "demo data" —
+    the numbers you see are computed by the backend when you load the page.</p>
+    <div class="grid cards cols-2">
+      <div class="panel card">
+        <span class="kicker">Three-arm comparison</span>
+        <h3>Console</h3>
+        <p>Run no-coordination, battery-only, and full NEOS control on the identical seeded
+        scenario, side by side, with live charts of transformer loading, voltage and cost.</p>
+        <a class="go" href="./console.html">Open the console →</a>
+      </div>
+      <div class="panel card">
+        <span class="kicker">Section 5 of the roadmap</span>
+        <h3>Flexibility</h3>
+        <p>How much safely mobilisable capability the neighbourhood has right now — EV, battery
+        and appliance headroom, bounded by the transformer and by forecast uncertainty.
+        Always labelled an estimate, never a guarantee.</p>
+        <a class="go" href="./flexibility.html">View the envelope →</a>
+      </div>
+      <div class="panel card">
+        <span class="kicker">Section 6 of the roadmap</span>
+        <h3>Decision trace</h3>
+        <p>A plain-language record of every control step: what was detected, what was proposed,
+        how the safety layer modified it, and why — with the physics check always reported as
+        verified, infeasible, or solver-failed, never collapsed into ok/not-ok.</p>
+        <a class="go" href="./trace.html">Read the trace →</a>
+      </div>
+      <div class="panel card">
+        <span class="kicker">The audit trail</span>
+        <h3>Evidence</h3>
+        <p>What's tested, what's verified against real OpenDSS physics, and what in the wider
+        roadmap is explicitly not built yet. No claim here outruns a test.</p>
+        <a class="go" href="./evidence.html">Check the record →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section honest">
+  <div class="wrap">
+    <h2>What this is, plainly</h2>
+    <div class="grid cols-2">
+      <div>
+        <p style="margin-bottom:10px"><strong style="color:var(--ink)">What's real:</strong> an
+        unbalanced three-phase power flow (OpenDSS), a chance-constrained optimiser, a safety
+        layer that verifies every action, and an automated test suite (count on the Evidence page) covering the control, safety
+        and forecasting logic.</p>
+      </div>
+      <div class="honest">
+        <ul>
+          <li>No equipment is commanded — simulation only</li>
+          <li>Weather and demand data are synthetic</li>
+          <li>Hardware-in-the-loop is not built</li>
+          <li>Multi-agent reinforcement learning is not built</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="neos-foot-root"></div>
+
+<script src="./assets/nav.js"></script>
+<script>
+document.getElementById('hero-mark').innerHTML = NEOS_LOGO.replace('viewBox', 'style="width:64px;height:64px" viewBox');
+NEOS_NAV.render('home');
+NEOS_NAV.renderFoot();
+
+fetch('/api/meta').then(r => r.json()).then(d => {
+  document.getElementById('s-backend').textContent = d.grid_backend;
+  document.getElementById('s-homes').textContent = d.homes;
+}).catch(() => {
+  document.getElementById('s-backend').textContent = '—';
+  document.getElementById('s-homes').textContent = '—';
+});
+</script>
+</body>
+</html>

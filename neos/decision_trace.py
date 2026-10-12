@@ -109,7 +109,7 @@ def _reason(status, n_interventions, scales, tx_loading, fallback_used):
     else:
         groups_txt = "one or more resource groups (exact group not resolved this step)"
     return (f"The safety layer reduced {groups_txt} to stay within electrical limits "
-           f"({n_interventions} intervention(s) this step); verified transformer "
+           f"({n_interventions} resource-group action(s) this step); verified transformer "
            f"loading settled at {tx_loading:.1f}%.")
 
 

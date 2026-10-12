@@ -8,13 +8,13 @@ const NEOS_LOGO = `
 </svg>`;
 
 const NEOS_PAGES = [
-  ['home', 'Home', '/'],
-  ['grid', 'Grid', './grid.html'],
-  ['community', 'Community', './community.html'],
-  ['utility', 'Utility', './utility.html'],
-  
+  ['home', 'Home', './index.html'],
+  ['console', 'Console', './console.html'],
+  ['flexibility', 'Flexibility', './flexibility.html'],
+  ['trace', 'Decision trace', './trace.html'],
+  ['discom', 'DISCOM', './discom.html'],
   ['rural', 'Rural', './rural.html'],
-  ['hub', 'Participation', './hub.html'],
+  ['hub', 'Hub', './hub.html'],
   ['evidence', 'Evidence', './evidence.html'],
 ];
 
@@ -32,7 +32,7 @@ const NEOS_NAV = {
             <div class="neos-links">${links}</div>
             <div class="neos-status"><span class="dot"></span><span id="neos-backend-label">checking backend…</span></div>
           </div>
-          <${standalone ? 'span' : 'a href="/"'} class="neos-brand" style="text-decoration:none">
+          <${standalone ? 'span' : 'a href="./index.html"'} class="neos-brand" style="text-decoration:none">
             <span class="word">NEOS</span>${NEOS_LOGO}
           </${standalone ? 'span' : 'a'}>
         </div>
@@ -57,4 +57,3 @@ const NEOS_NAV = {
     if (root) root.outerHTML = html;
   }
 };
-

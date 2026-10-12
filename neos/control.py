@@ -115,6 +115,7 @@ class Plan:
     k0: int = 0                       # control step the plan starts at
     n_vars: int = 0
     n_rows: int = 0
+    req_slack: float = 0.0            # kW-steps of an unmet net_cap request (0 = fully met)
 
     def at(self, k):
         """Setpoints for absolute control step k (index INTO the plan)."""
@@ -124,11 +125,17 @@ class Plan:
         return i
 
 
+LAMBDA_REQUEST = 5.0       # INR per kW-step unmet (= 20 INR/kWh): outranks energy cost, stays BELOW the tier-2 EV-shortfall penalty (>= 24 INR/kWh)
+
+
 def solve_mpc(H, inflex, pv, ev_items, batt_items, defer_items, p_headroom, p_export,
-              tariff, fixed=None, curt_cap=None):
+              tariff, fixed=None, curt_cap=None, net_cap=None):
     """
     inflex/pv : dict with 'p10','p50','p90' arrays (length >= H)
     fixed     : optional kW series of PROTECTED load (explicit user requirements)
+    net_cap   : optional per-step SOFT cap on forecast net import (kW), e.g. a
+                DISCOM request. Penalised slack, so it can never make the LP
+                infeasible and never outranks a user's EV requirement.
     Variables: xev, pc, pd, xfl, cur, ep (import epigraph), z (peak), slacks,
     and battery energy STATE variables eB (sparse dynamics instead of dense
     triangular sums -- this is what makes the LP fast enough to re-solve often).
@@ -142,7 +149,8 @@ def solve_mpc(H, inflex, pv, ev_items, batt_items, defer_items, p_headroom, p_ex
     oE = 0; oC = oE + nE * H; oD = oC + nB * H; oF = oD + nB * H
     oCur = oF + nF * H; oEp = oCur + H; oZ = oEp + H
     oS = oZ + 1; oS2 = oS + nE; oSF = oS2 + nE; oSB = oSF + nF; oEB = oSB + nB
-    N = oEB + nB * H
+    oSR = oEB + nB * H
+    N = oSR + (H if net_cap is not None else 0)
 
     ub = np.full(N, np.inf); lb = np.zeros(N)
     for i, e in enumerate(ev_items):
@@ -166,6 +174,8 @@ def solve_mpc(H, inflex, pv, ev_items, batt_items, defer_items, p_headroom, p_ex
         c[oD + b * H:oD + (b + 1) * H] = LAMBDA_DEG * DT / 2
         c[oSB + b] = 6.0
     c[oCur:oCur + H] = LAMBDA_CURT * DT
+    if net_cap is not None:
+        c[oSR:oSR + H] = LAMBDA_REQUEST
     for j, F in enumerate(defer_items):
         c[oSF + j] = 45.0 * (1.2 - F['flex'])
         c[oF + j * H:oF + (j + 1) * H] += 0.05 * np.arange(H) * (1 - F['flex'])
@@ -200,6 +210,8 @@ def solve_mpc(H, inflex, pv, ev_items, batt_items, defer_items, p_headroom, p_ex
         add(ctrl + [(oZ, -1.0)], -(i50[h] - v50[h]))                     # peak epigraph
         add(ctrl + [(oEp + h, -1.0)], -(i50[h] - v50[h]))                # import epigraph
         add(ctrl, p_headroom[h] - (i90[h] - v10[h]))                     # chance: import headroom
+        if net_cap is not None:                                          # soft DISCOM cap
+            add(ctrl + [(oSR + h, -1.0)], float(net_cap[h]) - (i50[h] - v50[h]))
         add([(cc, -vv) for cc, vv in ctrl], p_export[h] + (i10[h] - v90[h]))  # chance: export limit
 
     for i, e in enumerate(ev_items):                                     # two-tier delivery
@@ -237,7 +249,8 @@ def solve_mpc(H, inflex, pv, ev_items, batt_items, defer_items, p_headroom, p_ex
     net = i50 - v50 + ev.sum(0) + bc.sum(0) - bd.sum(0) + fl.sum(0) + cur
     return Plan(status='optimal', H=H, ev=ev, bc=bc, bd=bd, fl=fl, curt=cur, plan_net=net,
                 shortfall=x[oS:oS + nE], shortfall2=x[oS2:oS2 + nE], obj=float(res.fun),
-                solve_s=dt, n_vars=N, n_rows=r + re_)
+                solve_s=dt, n_vars=N, n_rows=r + re_,
+                req_slack=float(x[oSR:oSR + H].sum()) if net_cap is not None else 0.0)
 
 
 # -------------------------------------------------------------- safety layer

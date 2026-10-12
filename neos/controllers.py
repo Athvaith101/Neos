@@ -60,6 +60,49 @@ class UncoordinatedController:
         pass
 
 
+# ------------------------------------------------------- no control (Arm A)
+class NoControlController:
+    """V3 roadmap, section 7, Arm A -- 'normal uncontrolled behaviour'.
+
+    This is DELIBERATELY a separate class from UncoordinatedController, even
+    though the two look similar, because they answer different questions.
+    UncoordinatedController (mode='uncoordinated') already runs battery
+    self-consumption logic -- charge on PV surplus, discharge on net demand --
+    which is exactly the roadmap's Arm B ('battery optimisation without
+    broader flexibility coordination'), not Arm A. Collapsing the two would
+    make it impossible to separate "does having a battery with even the
+    simplest control help at all" (Arm A -> Arm B) from "does full NEOS
+    coordination help beyond that" (Arm B -> Arm C) -- which is the entire
+    point of the roadmap's three-arm design (section 7, "Fair-comparison
+    rule"). EVs and appliances behave identically to UncoordinatedController
+    (immediate charge on plug-in, immediate use) in both arms, because the
+    roadmap's Arm A/B distinction is specifically about the BATTERY.
+
+    EXISTING UncoordinatedController, and every test or result built on
+    mode='uncoordinated', is left completely unchanged: this is a new,
+    additive mode ('no_control'), not a redefinition of an existing one."""
+    name = 'no_control'
+    uses_safety_groups = False
+
+    def __init__(self, nb, defer_pref):
+        self.nb, self.defer_pref = nb, defer_pref
+
+    def act(self, obs):
+        p = Proposal()
+        for i, e in obs['ev'].items():
+            p.ev[i] = e['p_max'] if e['need_user_kwh'] > 1e-3 else 0.0
+        # Battery deliberately issues NO charge/discharge commands at all --
+        # it is physically present but grid-inert, the Arm A baseline every
+        # other arm's benefit is measured against.
+        for i, f in obs['defer'].items():
+            if f['rem'] > 1e-3 and obs['k'] >= self.defer_pref[i]:
+                p.fl[i] = f['p_max']
+        return p
+
+    def feedback(self, st, res):
+        pass
+
+
 # --------------------------------------------------------------- rule policy
 class RulePolicy:
     """A transparent time-of-use heuristic. Exists to prove the policy interface
@@ -102,6 +145,13 @@ class RulePolicy:
 
 
 # ------------------------------------------------------------------- MPC
+def _protect_ev(items):
+    """A DISCOM request must never be paid for with a late EV: in the capped solve both
+    delivery tiers use the EARLY (p10) departure deadline, so deferral can only use slack
+    that exists even if the user leaves early."""
+    return [dict(e, deadline2=e['deadline']) for e in items]
+
+
 class MPCController:
     name = 'coordinated_mpc'
     uses_safety_groups = True
@@ -118,6 +168,7 @@ class MPCController:
         self.plan_status = {}
         self.fallback = RulePolicy(nb)
         self.n_fallback_steps = 0
+        self.net_cut = None            # optional absolute-step array: requested reduction of net import (kW)
 
     # -- heuristic (NOT physical) adaptation of the aggregate limits from telemetry
     def feedback(self, st, res):
@@ -176,6 +227,43 @@ class MPCController:
         pv = {q: self.fc['pv'][q][sl] for q in ('p10', 'p50', 'p90')}
         return H, ev_items, ev_ids, b_items, b_ids, f_items, f_ids, infl, pv, fixed
 
+    def cut_capability(self, obs, start_abs, n, x_hi=450.0, tol_kwsteps=0.5, iters=11):
+        """Largest SUSTAINED reduction of net import (kW) over [start_abs, start_abs+n)
+        that the optimiser can deliver with ZERO unmet slack, given the state NOW,
+        the forecast, device limits, EV requirements and the battery reserve.
+        READ-ONLY: solves LPs from the current observation; changes nothing.
+        Returns None if the window is outside the planning horizon."""
+        k = obs['k']
+        H, evi, evid, bi, bid, fi, fid, infl, pv, fixed = self._build(obs)
+        a, b = start_abs - k, start_abs - k + n
+        if a < 0 or b > H:
+            return None
+        tar = tariff_vector(H, offset=obs['t'])
+        kw = dict(fixed=fixed)
+        args = (H, infl, pv, evi, bi, fi, np.full(H, self.P_head), np.full(H, self.P_exp), tar)
+        p0 = solve_mpc(*args, **kw)
+        if p0.status != 'optimal':
+            return 0.0
+        z0 = float(p0.plan_net.max())
+        evp = _protect_ev(evi)
+
+        def feasible(x):
+            cap = np.full(H, z0)
+            cap[a:b] = p0.plan_net[a:b] - x
+            pl = solve_mpc(H, infl, pv, evp, bi, fi, np.full(H, self.P_head),
+                           np.full(H, self.P_exp), tar, fixed=fixed, net_cap=cap)
+            return pl.status == 'optimal' and pl.req_slack <= tol_kwsteps
+        lo, hi = 0.0, x_hi
+        if feasible(hi):
+            return hi
+        for _ in range(iters):
+            mid = 0.5 * (lo + hi)
+            if feasible(mid):
+                lo = mid
+            else:
+                hi = mid
+        return float(lo)
+
     def act(self, obs):
         k = obs['k']
         replan = (self.plan is None or k - self.plan.k0 >= self.mpc_every
@@ -183,8 +271,23 @@ class MPCController:
         if replan:
             H, evi, evid, bi, bid, fi, fid, infl, pv, fixed = self._build(obs)
             tar = tariff_vector(H, offset=obs['t'])
-            plan = solve_mpc(H, infl, pv, evi, bi, fi, np.full(H, self.P_head),
-                             np.full(H, self.P_exp), tar, fixed=fixed)
+            cap = None
+            if self.net_cut is not None:
+                cut = np.zeros(H)
+                seg = np.asarray(self.net_cut, float)[k:k + H]
+                cut[:len(seg)] = seg
+                if cut.max() > 0:
+                    # The request is defined against the optimiser's OWN unrequested plan
+                    # (forecast space, same information), and the response may not create a
+                    # higher peak than that plan: no rebound above the baseline peak.
+                    p0 = solve_mpc(H, infl, pv, evi, bi, fi, np.full(H, self.P_head),
+                                   np.full(H, self.P_exp), tar, fixed=fixed)
+                    if p0.status == 'optimal':
+                        z0 = float(p0.plan_net.max())
+                        cap = np.where(cut > 0, p0.plan_net - cut, z0)
+            plan = solve_mpc(H, infl, pv, evi if cap is None else _protect_ev(evi), bi, fi,
+                             np.full(H, self.P_head), np.full(H, self.P_exp), tar,
+                             fixed=fixed, net_cap=cap)
             plan.ev_ids, plan.b_ids, plan.f_ids, plan.k0 = evid, bid, fid, k
             self.plan = plan
             self.n_solves += 1

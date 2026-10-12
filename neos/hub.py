@@ -1,270 +1,209 @@
 """
-hub.py -- Community Energy Hub / low-income resilience simulator (15-min, one year).
+hub.py -- Community hub: household participation with OFFLINE-FIRST pledging.
 
-ALL parameters below are SIMULATION ASSUMPTIONS, not deployment specifications.
-Demand and outage traces are synthetic and seeded; the historical outage model
-behind the old numbers is not available, so agreement with those numbers is a
-regression check, not validation.
+SIMULATED PROTOCOL, not an app. There is no phone client, SMS gateway, USSD session or network in
+this repo; "devices" are in-memory objects and "connectivity" is a flag. What IS implemented and tested:
 
-Arms (identical demand, outage trace, start SOC, device availability):
-    no_hub        grid only; outage = no supply
-    battery_only  hub battery: peak shaving above a protected reserve; serves the
-                  essential section in outages (grid-forming converter, CONCEPT)
-    battery_flex  as battery_only + (a) voluntary evening load shifting
-                  (noticeboard/SMS participation) that reduces battery discharge,
-                  (b) tiered service in outages: below a SOC threshold only tier-1
-                  (critical lighting/fan/phone) is served, to stretch endurance.
-
-Metrics follow the spec definitions. Hours "without essential supply" count outage
-hours where the essential demand is not FULLY met (so tier-1-only hours count as
-unmet; critical-tier hours are reported separately). Customer-hours avoided =
-connections x restored fully-met outage hours.
+  * a household pledges to cut/shift load (kW, step window) from a device that may be offline;
+  * offline events wait in a local queue, each with a per-household sequence number (idempotency key);
+  * on sync the hub applies them in sequence order, drops exact duplicates, and gives EVERY event an
+    explicit outcome (applied / duplicate / expired / rejected) -- nothing is silently lost;
+  * a later pledge for the same household+window supersedes an earlier one (last sequence wins);
+  * an SMS-style text ("PLEDGE 1.5 72 80") is parsed to the same events, with errors returned to the sender;
+  * only CONFIRMED (synced) pledges count toward committed capacity, and committed capacity is
+    discounted by that household's measured past reliability before it is offered to a DISCOM request;
+  * credits are PARTICIPATION POINTS in kWh of measured delivery (never money; no settlement is modelled).
 """
 from __future__ import annotations
-from dataclasses import dataclass, asdict, replace
-import hashlib, json
-import numpy as np
-from .reserve import hours_remaining
+from dataclasses import dataclass, field
+import re
+import threading
 
-DT = 0.25
-STEPS_YEAR = 365 * 96
+APPLIED, DUPLICATE, EXPIRED, REJECTED = 'applied', 'duplicate', 'expired', 'rejected'
+MAX_PLEDGE_KW = 10.0
+PRIOR_RELIABILITY = 0.5          # neutral prior for a household with no history (disclosed assumption)
 
 
-@dataclass(frozen=True)
-class HubConfig:
-    n_homes: int = 150
-    n_shops: int = 10
-    tx_kva: float = 100.0
-    batt_kwh: float = 100.0
-    conv_kw: float = 40.0
-    home_limiter_kw: float = 0.200
-    shop_limiter_kw: float = 0.500
-    import_cap_kw: float = 95.0
-    soc_min: float = 0.15
-    soc_max: float = 0.95
-    soh: float = 0.95
-    eta_batt: float = 0.98            # one-way cell efficiency
-    eta_conv: float = 0.97            # one-way converter efficiency
-    aux_kw: float = 0.30
-    hot_derate: float = 0.90          # converter derating in hot months (Apr-May)
-    derate_override: float = 1.0      # stress: extra converter power derating
-    reserve_soc: float = 0.50         # protected SOC fraction for outages (fixed policy)
-    shave_kw: float = 62.0            # peak-shaving import target
-    dr_cut: float = 0.05              # voluntary evening shift (flex arm)
-    tier1_frac: float = 0.60          # critical share of essential demand
-    degrade_soc: float = 0.30         # flex arm drops to tier-1 below this SOC
-    outages_per_year: float = 55.0
-    outage_mean_h: float = 3.2
-    start_soc: float = 0.90
+@dataclass
+class Event:
+    hh: str
+    seq: int
+    kind: str                     # 'pledge' | 'withdraw'
+    start: int = 0
+    end: int = 0
+    kw: float = 0.0
+    channel: str = 'app'
+    outcome: str = 'pending'
+    reason: str = ''
+
+
+@dataclass
+class Household:
+    hh: str
+    applied_seqs: set = field(default_factory=set)
+    pledge: dict | None = None    # single active pledge: dict(start,end,kw,seq)
+    delivered_kwh: float = 0.0
+    promised_kwh: float = 0.0
+    points: float = 0.0
+
+
+class Device:
+    """A household's phone/feature-phone. Holds its own sequence counter and offline queue."""
+    def __init__(self, hh):
+        self.hh, self.online, self.seq, self.queue = hh, True, 0, []
+
+    def submit(self, hub, kind, start=0, end=0, kw=0.0, channel='app'):
+        self.seq += 1
+        ev = Event(self.hh, self.seq, kind, int(start), int(end), float(kw), channel)
+        if self.online:
+            hub.receive([ev], now=hub.now)
+        else:
+            ev.outcome = 'queued'
+            self.queue.append(ev)
+        return ev
+
+    def sync(self, hub):
+        if not self.online:
+            return []
+        evs, self.queue = self.queue, []
+        hub.receive(evs, now=hub.now)
+        return evs
+
+
+class Hub:
+    def __init__(self, households, now=0):
+        self.h = {x: Household(x) for x in households}
+        self.devices = {x: Device(x) for x in households}
+        self.now = int(now)       # current step index
+        self.log: list[Event] = []
+        self._lock = threading.RLock()
+
+    # ---- persistence (JSON; no database, no auth)
+    def to_dict(self):
+        with self._lock:
+            ev = lambda e: dict(hh=e.hh, seq=e.seq, kind=e.kind, start=e.start, end=e.end, kw=e.kw,
+                                channel=e.channel, outcome=e.outcome, reason=e.reason)
+            return dict(now=self.now,
+                        households={k: dict(applied_seqs=sorted(x.applied_seqs), pledge=x.pledge, delivered_kwh=x.delivered_kwh,
+                                            promised_kwh=x.promised_kwh, points=x.points) for k, x in self.h.items()},
+                        devices={k: dict(online=d.online, seq=d.seq, queue=[ev(e) for e in d.queue]) for k, d in self.devices.items()},
+                        log=[ev(e) for e in self.log[-500:]])
+
+    @classmethod
+    def from_dict(cls, d):
+        hub = cls(list(d['households']), now=d.get('now', 0))
+        for k, x in d['households'].items():
+            hh = hub.h[k]
+            hh.applied_seqs, hh.pledge = set(x['applied_seqs']), x['pledge']
+            hh.delivered_kwh, hh.promised_kwh, hh.points = x['delivered_kwh'], x['promised_kwh'], x['points']
+        for k, x in d['devices'].items():
+            dv = hub.devices[k]; dv.online, dv.seq = x['online'], x['seq']
+            dv.queue = [Event(**e) for e in x['queue']]
+        hub.log = [Event(**e) for e in d['log']]
+        return hub
+
+    # ---- ingest
+    def receive(self, events, now=None):
+        with self._lock:
+            for ev in sorted(events, key=lambda e: (e.hh, e.seq)):
+                self.log.append(ev)
+                hh = self.h.get(ev.hh)
+                if hh is None:
+                    ev.outcome, ev.reason = REJECTED, 'unknown household'; continue
+                if ev.seq in hh.applied_seqs:
+                    ev.outcome, ev.reason = DUPLICATE, 'sequence already applied'; continue
+                if ev.kind == 'pledge':
+                    if not (0 < ev.kw <= MAX_PLEDGE_KW) or ev.end <= ev.start or ev.start < 0:
+                        ev.outcome, ev.reason = REJECTED, f'need 0<kw<={MAX_PLEDGE_KW} and end>start'; continue
+                    if ev.end <= self.now:
+                        hh.applied_seqs.add(ev.seq)
+                        ev.outcome, ev.reason = EXPIRED, 'window already over when it reached the hub'; continue
+                    cur = hh.pledge
+                    if cur and cur['seq'] > ev.seq:
+                        hh.applied_seqs.add(ev.seq)
+                        ev.outcome, ev.reason = DUPLICATE, 'superseded by a later pledge already applied'; continue
+                    hh.pledge = dict(start=ev.start, end=ev.end, kw=ev.kw, seq=ev.seq)
+                elif ev.kind == 'withdraw':
+                    if hh.pledge and hh.pledge['seq'] < ev.seq:
+                        hh.pledge = None
+                else:
+                    ev.outcome, ev.reason = REJECTED, 'unknown event kind'; continue
+                hh.applied_seqs.add(ev.seq)
+                ev.outcome = APPLIED
+
+    def sms(self, sender, text):
+        """'PLEDGE <kw> <start> <end>' or 'WITHDRAW'. Returns (reply, event|None). Needs no data connection
+        on the hub side beyond the gateway; the household's phone only needs voice/SMS coverage."""
+        t = text.strip().upper()
+        dev = self.devices.get(sender)
+        if dev is None:
+            return 'ERR unknown number', None
+        m = re.fullmatch(r'PLEDGE\s+([0-9]+(?:\.[0-9]+)?)\s+(\d+)\s+(\d+)', t)
+        if m:
+            ev = Device.submit(_Online(dev), self, 'pledge', int(m.group(2)), int(m.group(3)), float(m.group(1)), 'sms')
+            return f'{ev.outcome.upper()} {ev.reason}'.strip(), ev
+        if t == 'WITHDRAW':
+            ev = Device.submit(_Online(dev), self, 'withdraw', channel='sms')
+            return f'{ev.outcome.upper()}', ev
+        return 'ERR format: PLEDGE <kw> <start> <end> | WITHDRAW', None
+
+    # ---- capacity and credit
+    def reliability(self, hh):
+        x = self.h[hh]
+        if x.promised_kwh <= 0:
+            return PRIOR_RELIABILITY
+        return max(0.0, min(1.0, x.delivered_kwh / x.promised_kwh))
+
+    def committed_kw(self, start, end):
+        """Confirmed pledges covering the WHOLE window [start,end), raw and reliability-discounted."""
+        raw = disc = 0.0
+        n = 0
+        for k, x in self.h.items():
+            p = x.pledge
+            if p and p['start'] <= start and p['end'] >= end:
+                raw += p['kw']; disc += p['kw'] * self.reliability(k); n += 1
+        return dict(raw_kw=raw, expected_kw=disc, households=n,
+                    note='expected_kw is discounted by each household\'s measured past delivery '
+                         f'(neutral prior {PRIOR_RELIABILITY} until history exists); it is an estimate, not a guarantee')
+
+    def settle(self, start, end, achieved_kw, dt_h=0.25):
+        """achieved_kw: {hh: measured reduction in kW over the window}. Updates reliability and points."""
+        out = {}
+        with self._lock:
+            for k, x in self.h.items():
+                p = x.pledge
+                if not (p and p['start'] <= start and p['end'] >= end):
+                    continue
+                dur = (end - start) * dt_h
+                prom = p['kw'] * dur
+                got = min(prom, max(0.0, float(achieved_kw.get(k, 0.0))) * dur)
+                x.promised_kwh += prom; x.delivered_kwh += got; x.points += got
+                out[k] = dict(promised_kwh=prom, delivered_kwh=got)
+        return out
+
+    def snapshot(self):
+        with self._lock:
+            return dict(
+                now=self.now,
+                households=[dict(hh=k, pledge=x.pledge, reliability=self.reliability(k), points_kwh=round(x.points, 3),
+                                 online=self.devices[k].online, queued=len(self.devices[k].queue))
+                            for k, x in self.h.items()],
+                log=[dict(hh=e.hh, seq=e.seq, kind=e.kind, start=e.start, end=e.end, kw=e.kw,
+                          channel=e.channel, outcome=e.outcome, reason=e.reason) for e in self.log[-60:]],
+                queued=[dict(hh=e.hh, seq=e.seq, kind=e.kind, start=e.start, end=e.end, kw=e.kw)
+                        for d in self.devices.values() for e in d.queue],
+                disclaimer='Simulated protocol: no phone client, SMS gateway or network exists in this repo. '
+                           'Points are participation credit, not money; no settlement is modelled. It is an offline-pledging demo, not an energy-sharing hub.')
+
+
+class _Online:
+    """Adapter so an SMS (which reaches the hub directly) bypasses the household's offline queue."""
+    def __init__(self, dev):
+        self._d = dev
+        self.hh = dev.hh
+        self.online = True
 
     @property
-    def connections(self):
-        return self.n_homes + self.n_shops
-
-    def config_hash(self):
-        return hashlib.sha256(json.dumps(asdict(self), sort_keys=True).encode()).hexdigest()[:16]
-
-
-HIST = dict(hours_no_hub=174.0, hours_hub=24.0, ens_no_hub=3527.0, ens_hub=430.0,
-            served=0.878, ridden=0.862, customer_hours=24000.0,
-            peak_before=78.8, peak_after=61.8)
-
-
-# ----------------------------------------------------------------- traces
-def make_traces(cfg: HubConfig, seed: int):
-    rng = np.random.default_rng(seed)
-    N = STEPS_YEAR
-    t = np.arange(N)
-    h = (t % 96) * DT
-    month = np.minimum(11, ((t // 96) * 12) // 365)
-    season = np.where((month >= 3) & (month <= 5), 1.25, np.where(month >= 10, 0.85, np.where(month <= 1, 0.85, 1.0)))
-    g = lambda x, m, s: np.exp(-((x - m) / s) ** 2)
-    shape_h = 0.35 + 0.30 * g(h, 7, 1.5) + 1.15 * g(h, 20, 2.0) + 0.15 * g(h, 13, 2.5)
-    scale = rng.lognormal(np.log(0.26), 0.35, cfg.n_homes)[:, None]
-    noise = rng.lognormal(0.0, 0.30, (cfg.n_homes, N))
-    homes = scale * shape_h[None, :] * season[None, :] * noise
-    open_ = ((h >= 9) & (h < 21)).astype(float)
-    shape_s = 0.25 + 1.2 * open_
-    sscale = rng.lognormal(np.log(0.8), 0.3, cfg.n_shops)[:, None]
-    shops = sscale * shape_s[None, :] * season[None, :] * rng.lognormal(0.0, 0.25, (cfg.n_shops, N))
-    D = homes.sum(0) + shops.sum(0)
-    E = (np.minimum(homes, cfg.home_limiter_kw).sum(0)
-         + np.minimum(shops, cfg.shop_limiter_kw).sum(0))
-    # outages: Poisson count, lognormal durations, 50 % starting in the evening
-    n_ev = rng.poisson(cfg.outages_per_year)
-    out = np.zeros(N, bool); ev_id = -np.ones(N, int)
-    sigma = 0.9; mu = np.log(cfg.outage_mean_h) - sigma ** 2 / 2
-    starts = []
-    for k in range(n_ev):
-        day = rng.integers(0, 365)
-        hr = rng.uniform(15, 23) if rng.random() < 0.5 else rng.uniform(0, 24)
-        s0 = int(day * 96 + hr / DT)
-        dur = int(np.clip(rng.lognormal(mu, sigma), 0.25, 24) / DT)
-        if s0 + dur >= N or out[max(0, s0 - 4):s0 + dur + 4].any():
-            continue
-        out[s0:s0 + dur] = True; ev_id[s0:s0 + dur] = len(starts); starts.append((s0, dur))
-    derate = np.where((month == 3) | (month == 4), cfg.hot_derate, 1.0) * cfg.derate_override
-    return dict(D=D, E=E, out=out, ev_id=ev_id, events=starts, derate=derate, N=N)
-
-
-# ------------------------------------------------------------------- arms
-def simulate(cfg: HubConfig, tr, arm: str):
-    N = tr['N']; D, E, out, evid, derate = tr['D'], tr['E'], tr['out'], tr['ev_id'], tr['derate']
-    cap = cfg.batt_kwh * cfg.soh
-    e = cfg.start_soc * cap
-    lo, hi = cfg.soc_min * cap, cfg.soc_max * cap
-    ec, eb = cfg.eta_conv, cfg.eta_batt
-    n_ev = len(tr['events'])
-    ev_full = np.ones(max(1, n_ev), bool)
-    m = dict(ens=0.0, ens_critical=0.0, out_h=float(out.sum() * DT), h_unmet=0.0, h_unmet_crit=0.0,
-             h_partial=0.0, ess_out=0.0, served_out=0.0, conv_loss=0.0, batt_loss=0.0, aux=0.0,
-             throughput=0.0, dis_shave=0.0, cap_unserved=0.0, reserve_violations=0)
-    peak_eve = {}; carry = 0.0
-    imp_max = 0.0
-    soc_lo = 1.0
-    for t in range(N):
-        d, ess = D[t], E[t]
-        sod = t % 96
-        conv = cfg.conv_kw * derate[t]
-        if arm == 'no_hub':
-            if out[t]:
-                m['ens'] += ess * DT; m['ens_critical'] += cfg.tier1_frac * ess * DT
-                m['h_unmet'] += DT; m['h_unmet_crit'] += DT; m['ess_out'] += ess * DT
-                if evid[t] >= 0: ev_full[evid[t]] = False
-            else:
-                imp = d
-                imp_max = max(imp_max, imp)
-                if 72 <= sod < 88: peak_eve[t // 96] = max(peak_eve.get(t // 96, 0.0), imp)
-            continue
-        flex = arm == 'battery_flex'
-        if not out[t]:
-            dd = d
-            if flex:
-                if 72 <= sod < 88:
-                    cut = cfg.dr_cut * (d - 0.0) ; dd = d - cut; carry += cut
-                elif 88 <= sod < 92 and carry > 0:
-                    add = carry / ((92 - sod) * 1.0); dd = d + add; carry -= add
-                elif sod == 0:
-                    carry = 0.0
-            imp = dd + cfg.aux_kw
-            m['aux'] += cfg.aux_kw * DT
-            P = 0.0
-            if imp > cfg.shave_kw and e > cfg.reserve_soc * cap:
-                avail = (e - cfg.reserve_soc * cap) * ec * eb / DT
-                P = min(imp - cfg.shave_kw, conv, avail)          # discharge, AC kW
-                dc_bus = P / ec; cells = dc_bus / eb
-                e -= cells * DT; imp -= P
-                m['conv_loss'] += (dc_bus - P) * DT; m['batt_loss'] += (cells - dc_bus) * DT
-                m['throughput'] += cells * DT; m['dis_shave'] += P * DT
-            elif imp > cfg.import_cap_kw and e > lo:
-                avail = (e - lo) * ec * eb / DT
-                P = min(imp - cfg.import_cap_kw, conv, avail)
-                dc_bus = P / ec; cells = dc_bus / eb
-                e -= cells * DT; imp -= P
-                m['conv_loss'] += (dc_bus - P) * DT; m['batt_loss'] += (cells - dc_bus) * DT
-                m['throughput'] += cells * DT
-            elif imp < cfg.shave_kw and e < hi:
-                room = (hi - e) / (DT * ec * eb)
-                P = min(cfg.shave_kw - imp, conv, room)           # charge, AC kW from grid
-                dc_bus = P * ec; cells = dc_bus * eb
-                e += cells * DT; imp += P
-                m['conv_loss'] += (P - dc_bus) * DT; m['batt_loss'] += (dc_bus - cells) * DT
-                m['throughput'] += cells * DT
-            if imp > cfg.import_cap_kw:
-                m['cap_unserved'] += (imp - cfg.import_cap_kw) * DT
-            imp_max = max(imp_max, imp)
-            if 72 <= sod < 88: peak_eve[t // 96] = max(peak_eve.get(t // 96, 0.0), imp)
-            if e < cfg.reserve_soc * cap - 1e-9 and imp <= cfg.import_cap_kw and P == 0.0 and e > lo and False:
-                m['reserve_violations'] += 1
-        else:
-            soc_use = (e - lo) / max(hi - lo, 1e-9)
-            tier1_only = flex and (e / cap) < cfg.degrade_soc
-            target = cfg.tier1_frac * ess if tier1_only else ess
-            aux_dc = cfg.aux_kw * DT
-            avail_ac = max(0.0, (e - lo - aux_dc / eb) * ec * eb / DT)
-            P = min(target, conv, avail_ac)
-            dc_bus = P / ec; cells = dc_bus / eb
-            e -= cells * DT + aux_dc / eb
-            m['aux'] += aux_dc
-            m['conv_loss'] += (dc_bus - P) * DT; m['batt_loss'] += (cells - dc_bus) * DT
-            m['throughput'] += cells * DT
-            m['ess_out'] += ess * DT; m['served_out'] += P * DT
-            m['ens'] += (ess - P) * DT
-            crit_need = cfg.tier1_frac * ess
-            if P < crit_need - 1e-9:
-                m['ens_critical'] += (crit_need - P) * DT; m['h_unmet_crit'] += DT
-            if P < ess - 1e-9:
-                m['h_unmet'] += DT
-                if evid[t] >= 0: ev_full[evid[t]] = False
-                if P >= crit_need - 1e-9: m['h_partial'] += DT
-        soc_lo = min(soc_lo, e / cap)
-        assert -1e-6 <= e <= cap + 1e-6, 'SOC out of physical range'
-    m['terminal_soc'] = e / cap
-    m['min_soc'] = soc_lo
-    m['events'] = n_ev
-    m['events_ridden'] = int(ev_full[:n_ev].sum()) if n_ev else 0
-    m['evening_peak_mean_kw'] = float(np.mean(list(peak_eve.values()))) if peak_eve else 0.0
-    m['import_peak_kw'] = float(imp_max)
-    m['outage_demand_served'] = m['served_out'] / m['ess_out'] if m['ess_out'] > 0 else 1.0
-    m['events_ridden_frac'] = m['events_ridden'] / n_ev if n_ev else 1.0
-    m['customer_hours_avoided'] = cfg.connections * (m['out_h'] - m['h_unmet'])
-    m['hours_without_essential_supply'] = m['h_unmet']
-    m['hours_without_critical_supply'] = m['h_unmet_crit']
-    return m
-
-
-ARMS = ('no_hub', 'battery_only', 'battery_flex')
-
-
-def run_seed(cfg, seed):
-    tr = make_traces(cfg, seed)
-    return {a: simulate(cfg, tr, a) for a in ARMS}, tr
-
-
-def study(cfg=HubConfig(), seeds=range(10)):
-    rows = []
-    for s in seeds:
-        r, _ = run_seed(cfg, s)
-        rows.append(r)
-    keys = ['hours_without_essential_supply', 'hours_without_critical_supply', 'ens', 'ens_critical',
-            'outage_demand_served', 'events_ridden_frac', 'customer_hours_avoided',
-            'evening_peak_mean_kw', 'import_peak_kw', 'terminal_soc', 'conv_loss', 'batt_loss',
-            'cap_unserved', 'dis_shave', 'out_h', 'events']
-    agg = {}
-    for a in ARMS:
-        agg[a] = {}
-        for k in keys:
-            v = np.array([r[a][k] for r in rows], float)
-            agg[a][k] = dict(mean=float(v.mean()), sd=float(v.std(ddof=1)) if len(v) > 1 else 0.0,
-                             min=float(v.min()), max=float(v.max()))
-    tsoc = {a: agg[a]['terminal_soc']['mean'] for a in ARMS}
-    fair = max(tsoc['battery_only'], tsoc['battery_flex']) - min(tsoc['battery_only'], tsoc['battery_flex']) <= 0.05
-    return dict(config=asdict(cfg), config_hash=cfg.config_hash(), seeds=list(seeds), arms=agg,
-                per_seed=[{a: {k: r[a][k] for k in keys} for a in ARMS} for r in rows],
-                terminal_soc_comparable=bool(fair), terminal_soc_mean=tsoc,
-                endurance_indicator_h=hours_remaining(cfg.soc_max - cfg.soc_min, cfg.soh,
-                                                       cfg.eta_conv * cfg.eta_batt, cfg.batt_kwh,
-                                                       agg['no_hub']['ens']['mean'] / max(agg['no_hub']['out_h']['mean'], 1e-9)))
-
-
-def regression_check(st, rel_tol=0.15):
-    """Compare current outputs with the HISTORICAL numbers. Per the spec: if the
-    model does not reproduce them within tolerance the NEW values become current
-    and the old ones leave the active claim set. Both outcomes are reported."""
-    A = st['arms']
-    cur = dict(hours_no_hub=A['no_hub']['hours_without_essential_supply']['mean'],
-               hours_hub=A['battery_only']['hours_without_essential_supply']['mean'],
-               ens_no_hub=A['no_hub']['ens']['mean'], ens_hub=A['battery_only']['ens']['mean'],
-               served=A['battery_only']['outage_demand_served']['mean'],
-               ridden=A['battery_only']['events_ridden_frac']['mean'],
-               customer_hours=A['battery_only']['customer_hours_avoided']['mean'],
-               peak_before=A['no_hub']['evening_peak_mean_kw']['mean'],
-               peak_after=A['battery_only']['evening_peak_mean_kw']['mean'])
-    out = {}
-    for k, hv in HIST.items():
-        rel = (cur[k] - hv) / hv
-        out[k] = dict(historical=hv, current=cur[k], rel_diff=rel, within_tolerance=abs(rel) <= rel_tol)
-    return dict(tolerance=rel_tol, metrics=out,
-                all_within=all(v['within_tolerance'] for v in out.values()),
-                note='Demand, outage and arm parameters are assumptions made in this repo; the historical model is not '
-                     'available. A match would not be validation, and a mismatch means the current value replaces the old.')
+    def seq(self): return self._d.seq
+    @seq.setter
+    def seq(self, v): self._d.seq = v

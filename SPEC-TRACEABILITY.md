@@ -1,79 +1,34 @@
-# Specification traceability
+# SPEC-TRACEABILITY — status against the master specification
 
-Status of every item in the master specification's feature tiers (§46) and final checklist (Part II §31),
-against what exists in this repository. **Built** = implemented and covered by an automated test. **Partial** = implemented
-with a stated limitation. **Not built** = deliberately or otherwise absent. Nothing is marked built because the code *could*
-be extended to do it.
+Legend: **VERIFIED** = implemented and tested against OpenDSS (and the NumPy reference);
+**SIMULATED** = implemented, but only in simulation with synthetic data; **NOT BUILT**.
+Source: `NEOS_Master_Architecture_Prototype_Validation__1_.md`, Tiers 1–2 (the only spec text available).
+The "other zip" referred to in the brief was not supplied, so these features were rebuilt from the spec and the v2.0 audit; they are not a copy of any earlier implementation.
 
-All performance figures in the kits are **simulated**, from declared assumptions, and are not field validation.
-
-## Tier 1 (must build)
-
-| # | Feature | Status | Where | Limitation |
-|---|---|---|---|---|
-| 1 | Smart-meter / telemetry layer | Partial | `telemetry.py` (`RegisterStream`, `REGISTER_MAP`) | Simulated register stream with noise, quantisation, latency, dropouts and bad samples. No Modbus/HES/MDMS integration. |
-| 2 | State estimation | Partial | `telemetry.StateEstimator` | Per-channel Kalman filter with staleness and bad-data rejection. Not a topology-aware network state estimator. |
-| 3 | Probabilistic forecasting | Built (urban) | `forecast.py`, `nwp.py` | Causal, chronological hold-out, per-lead coverage. Synthetic demand and synthetic NWP. Hub has no forecast; rural reserve uses a clear-sky persistence forecast. |
-| 4 | Confidence-aware reserve | Built (rural) | `reserve.py`, `reserve_experiment.py` | Result: statistically better, practically small (see README). Hub uses a fixed reserve with sensitivity runs. |
-| 5 | Resource abstraction | Partial | `resources.py` | Used by the rural kit. The urban runner applies the same device rules inline rather than through these classes. |
-| 6 | Deadline scheduling | Partial | `rural.py`, `control.py` | Rural pumps/mill use a transparent deadline heuristic with min-run/min-rest/stagger rules, not an optimal MILP. EV deadlines are in the LP. |
-| 7 | Battery control | Built | `control.py`, `runner.py`, `rural.py`, `hub.py` | |
-| 8 | EV flexibility | Built (urban) | `control.EVEnvelope`, `runner.py` | Declared requirements are hard; infeasible ones are reported. |
-| 9 | Pump flexibility | Built (rural) | `resources.PumpRes`, `rural.py` | Pump power is an energy-equivalent model; motor inrush is not modelled. |
-| 10 | OpenDSS digital twin | **Partial: not executed** | `grid.OpenDSSGrid` | Written against OpenDSSDirect.py ≥ 0.9; OpenDSS could not be installed where this was built, so it has **never been run**. All results use the NumPy `ReferenceGrid`. Run `validate_backends.py` first. |
-| 11 | Device feasibility | Built | `resources.py`, `runner.py` | Power and energy bounds applied before any injection. |
-| 12 | Physics safety projection | Built | `control.safety_project` | Re-solves the final action; `verified` / `infeasible` / `solver_failed`. Phase limits enforced where modelled. |
-| 13 | Offline fallback | Partial | `controllers.CommsLossController`, `discom.py`, `offline.py` | Tested in the urban kit and the DISCOM emulation. Not exercised in the rural scheduler. |
-| 14 | Flexibility envelope | Built (emulation) | `envelope.py`, `discom.py` | Demonstrated on the hub. Not wired to the urban fleet. Confidence is a stated heuristic formula, not a calibrated probability. |
-| 15 | Decision trace | Built | `trace.py` | Urban (safety interventions, battery dispatch, declared requirements) and rural (pumps, mill, shedding, physics). Text is generated from live values. |
-| 16 | Verification ledger | Built | `ledger.py` | Local SHA-256 hash chain; tamper, deletion and reorder detected; expired commands rejected. |
-| 17 | Reproducible stress testing | Built | `experiments*.py`, `seeds.py`, `evidence.py` | SHA-256 seeds; config hash, source hash and versions in every result. |
-
-## Tier 2 (full demo)
-
-| # | Feature | Status | Notes |
+| Item | Status | Where | Evidence / caveat |
 |---|---|---|---|
-| 18 | Phase-aware transformer monitoring | Built (urban) | Per-phase V/I/PF/loading and imbalance with a stated formula and light-load floor. Phase-aware shedding showed **no measurable benefit** over phase-agnostic shedding in the 40 % skew test. |
-| 19 | Essential-service resilience | Built (hub, rural) | Hub does **not** reproduce the earlier hub figures (reported). |
-| 20 | Safe-island simulation | Built (concept) | State machine with tested invariants. Not protection design. |
-| 21 | Rural portfolio | Built | Sizes are assumptions. |
-| 22 | Priority tiers | Built | Includes a fractional marginal tier; the tier-1 vs community split is an explicit charter parameter. |
-| 23 | Cold-storage / thermal flexibility | Built | Hard minimum respected; used as flexibility above it. |
-| 24 | Productive loads | Partial | One non-interruptible mill block and a fixed workshop. |
-| 25 | Community gateway | Partial | Printed noticeboard and SMS generation only. No physical gateway. |
-| 26 | DISCOM console | Built (emulation) | No DISCOM, tariff or contract is represented. |
-| 27 | Communications-loss scenario | Built (urban, hub) | |
-| 28 | Forecast-failure scenario | Built (urban, rural) | |
+| Unbalanced 3-phase power flow | VERIFIED | `neos/grid.py` | `validate_backends.py`, OpenDSS vs reference |
+| Per-phase transformer loading + imbalance | VERIFIED | `neos/grid.py`, `neos/phase.py` | `validate_platform.py`; tests in `tests/test_platform.py`. Imbalance is defined only above 5% of per-phase rating. NEOS does not reduce imbalance (p95 ≈ 0.4 either way) |
+| Safety layer (VERIFIED/INFEASIBLE/SOLVER_FAILED) | VERIFIED | `neos/runner.py` | tests |
+| LP-MPC with chance constraints | VERIFIED | `neos/control.py` | tests, `results.json` |
+| Flexibility Envelope | SIMULATED | `neos/controllers.py` | Estimate only; the envelope overstated what was deliverable, so a read-only probe (`cut_capability`) is used for DISCOM decisions |
+| Decision Trace | VERIFIED | `neos/decision_trace.py` | tests |
+| DISCOM request emulation (ACCEPT/MODIFY/DEFER/REJECT) | SIMULATED | `neos/discom.py` | Measured baseline-vs-request protocol. **Held-out: 3 of 12 promises kept; mean delivery 77% of promise, minimum 54%.** The margin calibrated on dev seeds did not transfer. Not a guarantee. 100 kW requests were rejected (capability ≈ 45 kW) |
+| Rural kit: 5 priority tiers, village feeders | SIMULATED | `neos/rural.py` | 4 scenarios × 2 arms × 8 villages on OpenDSS; synthetic data |
+| Island mode | SIMULATED | `neos/rural.py` | Grid-forming source behind the same LV network, voltage/ampacity/inverter verified per step; energy audit ≈ 1e-13 kWh, no clipping. **Not modelled:** dynamics, black start, protection, resynchronisation |
+| Outage tier protection | SIMULATED | `neos/rural.py` | Poor-sun 12 h outage: tier-blind loses the clinic after 4.5 h; NEOS keeps tiers 1–2 and sheds all shops |
+| Community hub, offline participation | SIMULATED | `neos/hub.py` | Protocol logic tested (queue, idempotency, expiry, SMS parse, reliability discount). Per-session JSON persistence; no client app, gateway, authentication or settlement. Not the shared-battery energy hub |
+| Editable rural village | VERIFIED | `neos/rural.py` `village()` | Default reproduces archived results; larger battery never worse for the clinic; held-out study covers default only |
+| DISCOM settlement / baseline regulation | NOT BUILT | — | |
+| Hardware-in-the-loop, field pilots | NOT BUILT | — | |
+| Multi-agent RL | NOT BUILT | — | |
+| Real feeder / meter data | NOT BUILT | — | All data synthetic |
+| Stage-2 stress lab (`flex_req`, `flex_del`, `batt_reserve_viol`) | NOT BUILT | `neos/runner.py` | Fields exist, unpopulated |
+| Structural digital-twin calibration | NOT BUILT | — | |
 
-## Tier 3 (hold) and Tier 4 (do not make core)
-
-Each of the following is not built, by design:
-
-* Not built: second-life battery passport, solar-health monitoring, advanced forecasting models.
-* Not built: any reinforcement learning (**no MARL**).
-* Not built: cooperative-contract automation and Stackelberg pricing.
-* Not built: hardware actuation; no equipment is commanded.
-* Not built: P2P trading and blockchain trading (the ledger is a local hash chain only).
-* Not built: black-box end-to-end AI; appliance identification from aggregate meter data; public-feeder islanding experiments.
-* Not claimed: any guaranteed-flexibility statement. `claims.py` rejects wording that implies it.
-
-## Validation gates (Part II §21)
-
-| Gate | Status |
-|---|---|
-| 1 Software correctness | 97 automated tests; includes mutation checks of reintroduced audit bugs (see `AUDIT-STATUS.md`). |
-| 2 Physical correctness | **Not met**: OpenDSS check has not been executed. The reference solver stands in and is unverified against OpenDSS here. |
-| 3 Evidence correctness | `check_evidence.py` build gate (seed/config/version/staleness/kit-separation/historical-as-current/NaN) plus claim-language audit and secrets scan. |
-| 4 Scenario fairness | Identical traces across arms; terminal-state caveats displayed; weak-feeder parameters disclosed as scenario design. |
-| 5 Product demonstration | Console exercised against a stub DOM only; **not** rendered in a real browser. |
-
-## Final engineering checklist
-
-* **Done and tested:** forecast causality, hard EV requirements, impossible requests return infeasible, no unexplained NaN/Inf
-  (non-finite outputs become `solver_failed`), deterministic seeding, transformer/phase/voltage limits, reserve protection,
-  device feasibility, comms-loss fallback, expired-command rejection, kit selector, hub simulator, stress lab, envelope, ledger,
-  decision trace, rural scheduler, phase panel, evidence tags, kit-separated evidence, no secrets in the repository (scanner).
-* **Not done:** OpenDSS checks executed independently; "exposed keys rotated", "deployment environment checked" and "public demo
-  tested in a private browser" are outside what code in this repository can establish and have **not** been done.
-* **Pitch checklist:** the claim-language audit enforces no unqualified certified/approved/guaranteed/eliminated wording in the
-  documents it scans. It cannot check what is said aloud.
+## Bugs found and fixed during verification (disclosed)
+1. **OpenDSS `set_impedance_scale` silently ignored** (lines not re-bound). Found by cross-validating rural voltages (0.013 pu discrepancy). Affected OpenDSS only; the urban calibration study used the reference grid. Fixed with regression tests, mutation-verified.
+2. **Commercial PV injected on one phase**; now three-phase. Urban results regenerated on OpenDSS.
+3. **Intervention counting** now counts steps with an intervention, plus a separate group-action count.
+4. **Island logic shed load when the battery was full**; now curtails PV inside the solve.
+5. **DISCOM first delivery metric compared realised with forecast quantities**; replaced by the paired baseline protocol.

@@ -2,7 +2,7 @@
 from pathlib import Path
 
 root = Path(__file__).parent
-tpl = (root / "dash_template.html").read_text(encoding="utf-8")
+tpl = (root / "dash_template.html").read_text()
 
 LIVE_PANEL = """
   <section class="panel" id="livePanel">
@@ -47,7 +47,7 @@ EXTRA_CSS = """
 """
 
 BOOT = r"""
-const API = (location.hostname === "localhost" || location.hostname === "127.0.0.1") ? "" : "https://neos-arpj.onrender.com";
+const API = "";
 let P = {n_homes:300, n_ev:60, n_pv:150, n_bess:26, tx_kva:630};
 const D = {meta:null, forecast_benchmark:null, pv_calibration:null, scenarios:{}, study:null};
 const qs = () => new URLSearchParams(P).toString();
@@ -229,9 +229,8 @@ for fn in ['function renderPlate(){', 'function renderRail(){', 'function select
 core = core.replace('const D = __DATA__;', '')
 
 html = html[:start] + core + BOOT + html[tail_end:]
-html = html.replace('<title>Neighbourhood Energy OS — feeder coordination study</title>',
-                    '<title>Neighbourhood Energy OS — operator console</title>')
+html = html.replace('<title>NEOS — console</title>', '<title>NEOS — console</title>')
 
 (root / "web").mkdir(exist_ok=True)
-(root / "web" / "index.html").write_text(html, encoding="utf-8")
-print("web/index.html", len(html) // 1024, "KB")
+(root / "web" / "console.html").write_text(html)
+print("web/console.html", len(html) // 1024, "KB")

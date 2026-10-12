@@ -2,9 +2,10 @@ numpy>=1.26
 scipy>=1.11
 scikit-learn>=1.4
 fastapi>=0.110
-# Required by Starlette's TestClient in current FastAPI releases.
-httpx2
 uvicorn[standard]>=0.27
 # Optional: enables the OpenDSS backend (independent contexts need >= 0.9).
 # Without it the NumPy reference solver is used automatically.
 opendssdirect.py>=0.9
+# Needed by run_tests.py and the test suite:
+pytest>=8.0
+httpx2>=2.0   # Starlette 1.x TestClient (older Starlette < 1.0 used `httpx>=0.27` instead)

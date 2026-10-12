@@ -5,7 +5,7 @@ Every finding from the code audit, what changed, and the test that would fail if
 
 **Update (second environment, OpenDSS available):** this package was re-run in a container that
 *does* have `opendssdirect.py` installed -- the exact gap the previous pass flagged as untested.
-All 47 tests pass, including `test_opendss_context_isolation`, `python validate_backends.py` has
+(historical, v1 round) All 47 tests pass, including `test_opendss_context_isolation`, `python validate_backends.py` has
 now actually been run, and `results.json` was regenerated end to end on the real OpenDSS backend
 (`meta.grid_backend == "opendss"`), not the NumPy reference solver. Details below under
 "OpenDSS verification (this pass)". Nothing here is claimed as field-tested on real hardware.
@@ -68,7 +68,7 @@ Root-caused as follows, not just patched until it stopped happening:
   newly-exposed `backend` query parameter on `cfg_from` and the three endpoints it touches (`/api/meta`,
   `/api/flexibility`, `/api/decision_trace`), defaulting to `"auto"` everywhere else so no existing
   endpoint's behaviour changes.
-4. Verified fixed, not just "didn't crash once": the full 71-test suite was run four consecutive times
+4. Verified fixed, not just "didn't crash once": (historical) the full 71-test suite was run four consecutive times
   after the fix with zero crashes.
 5. **Acknowledged, not hidden, remaining gap:** `backend='auto'` resolving to OpenDSS through the full
   HTTP layer (API -> `service.get_world` -> `OpenDSSGrid`, end to end) was verified manually during
@@ -80,7 +80,7 @@ Root-caused as follows, not just patched until it stopped happening:
 
 | Workstream | Status |
 |---|---|
-| Regression testing | Done: 47 tests. |
+| Regression testing | Done (47 tests at that round). |
 | Electrical validation | Done (phase-resolved V, tx kVA, per-line ampacity, status per step). |
 | Deterministic benchmark | Done: sparse LP with solver status, latency, energy audit. |
 | Experimental design | Done: paired replicates, 95 % CIs, two held-out populations. Forecaster trained on normal days only, so every other regime is out-of-distribution. |
@@ -93,7 +93,7 @@ Root-caused as follows, not just patched until it stopped happening:
 
 ## OpenDSS verification (this pass)
 
-* **Full suite on the real backend: 47/47 pass.** `test_opendss_context_isolation` initially
+* **(historical) Full suite on the real backend: 47/47 pass.** `test_opendss_context_isolation` initially
   **failed** at the original `places=9` (sub-micro-pu) tolerance -- not because contexts leak
   into each other, but because the tolerance was unrealistic for ANY iterative nonlinear AC
   solve. Proof, not assertion: re-solving the SAME `OpenDSSGrid` instance on the IDENTICAL
@@ -129,17 +129,55 @@ Root-caused as follows, not just patched until it stopped happening:
   return correctly-shaped, OpenDSS-backed responses. A real browser against a real socket was
   still not exercised here -- see "Not verified" below.
 
+## Web layer, verified in a real browser (this pass)
+
+Run against a real `uvicorn` socket with Playwright/Chromium, OpenDSS backend:
+
+* **Flexibility and Decision-trace pages** are React 18 + TypeScript (`web/src/*.tsx`). They pass
+  `tsc --strict` with no errors, are compiled at build time (`node build_tsx.js`) and load React from
+  `web/assets/vendor/` -- no CDN, no in-browser Babel. In the browser: both render real API data, the
+  time slider changes the headline value (290 kW -> 118 kW in the check), the status filter works, the
+  console has no JavaScript errors, and a 390 px-wide viewport has no horizontal scroll.
+* **Console** is white by default and stays light under an OS dark-mode preference (checked). First load
+  on the OpenDSS backend is slow while the first comparison runs (tens of seconds), then cached.
+* Bug found and fixed: the flexibility chart's x-axis assumed a midnight start, but the simulated day
+  runs 12:00 -> 12:00, so the labels were wrong. Labels now come from each record's own hour.
+* Bug found and fixed: the trace page's filter row had a duplicated "Infeasible" button; the React
+  rewrite removes it. Server-generated text is now rendered through React (escaped), not `innerHTML`.
+* Test suite after this pass (historical): **75 passed**.
+
+Not covered by browser tests: the Evidence and Home pages were not re-opened this pass, the live SSE
+stream in the console was not exercised, and Google Fonts cannot load in this sandbox, so typography was
+checked with fallback fonts.
+
 ## Not verified in this environment
 
-* **Console in a browser.** Template JavaScript was edited and the file regenerates without
-  error, but it has not been opened in an actual browser; visual rendering, chart layout and the
-  live-stream UI are unconfirmed.
-* **`server.py` over a real HTTP socket.** The FastAPI app was exercised in-process via
-  `TestClient`, which runs the real routing/validation/serialisation logic but not an actual
-  TCP/HTTP stack. Background/long-running server processes could not be kept alive between
-  commands in this particular sandbox, so a genuine `curl` round-trip against a listening port
-  was not completed; the audit note's gap (no endpoint ever exercised) is nonetheless closed in
-  the sense that mattered -- the request/response logic itself is confirmed to work.
+* **Stage 2 stress lab** is half-built: `no_control` arm and tests exist; flexibility requested/delivered
+  and battery-reserve-violation metrics are declared but not yet populated, and there is no stress-lab page.
+* **A "v2.0 master-specification" round** (rural kit, DISCOM emulation, phase-imbalance metric,
+  `SPEC-TRACEABILITY.md`) is described in a separate AUDIT-STATUS.md but its code is **not in this
+  repository** and is not claimed here.
 * **Field deployment, real feeder data, real hardware.** Everything above is a verified
   simulation. It is evidence the code does what it claims to do internally, not evidence about a
   real neighbourhood.
+
+
+## Platform round (v4)
+- The current test count is whatever `test_status.json` says (written by `run_tests.py`); earlier counts in this file are historical. At the time of writing the suite passes in full; `validate_platform.py` ALL PASS (OpenDSS vs reference, rural scenarios).
+- Added: per-phase view, DISCOM request interface, rural kit with island mode. See `SPEC-TRACEABILITY.md`.
+- Honest findings: DISCOM promises kept 3/12 on held-out neighbourhoods (calibration did not transfer); NEOS does not fix phase imbalance; island mode is simulation-only.
+- Not verified: island dynamics, black start, protection, settlement, hardware, real data.
+- Bug disclosed: OpenDSS impedance scaling was silently ignored until fixed (urban study unaffected, used reference grid).
+
+### Follow-up round (user review points)
+1. Rural village now editable (homes, solar, battery kWh/kW; derived inverter 1.25x battery kW and transformer scaled with homes). Default reproduces the archived results exactly (tested). The held-out study is default-village only.
+2. Community hub built as a **simulated** offline-first protocol (`neos/hub.py`, `/hub.html`): queue, sequence numbers, explicit outcomes, SMS parsing, reliability-discounted commitments, participation points. No phone app, SMS gateway or network exists. State is keyed by a browser-generated session id (a label, not a login) and saved to JSON (`data/hub/`, `NEOS_HUB_DIR`); visitors no longer share one hub. Still not built: authentication, identity, anti-fraud, settlement, concurrency beyond a single server process. It is an offline-pledging demo, not the shared-battery energy hub.
+3. Test count: single source `test_status.json`.
+4. DISCOM: the UI now states 3/12 kept, mean and worst delivery beside every promise, and a "plan on" figure (promise x worst held-out ratio). The reliability itself was **not** improved; it is still weak.
+5. Islanding: unchanged and still simulation only. Dynamics, protection, black start and resynchronisation need an EMT/dynamic model and hardware tests, which this repo does not contain.
+
+### Review follow-up (round 2)
+- `pytest` and `httpx` added to `requirements.txt` (run_tests.py and the suite need them); regenerating `test_status.json` from a fresh install works.
+- README rewritten against the regenerated `results.json`: the headline table, held-out ranges, solar utilisation, EV misses and infeasible-step claims were stale and are corrected (heat now has 0 infeasible steps; the spike has 12).
+- Hub: per-session state with JSON persistence; wording says it is not the energy hub.
+- Rural: the held-out study still covers the default village only; the page says so for every custom setting.

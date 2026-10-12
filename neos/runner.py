@@ -17,7 +17,8 @@ import time
 import numpy as np
 from .world import T, DT
 from .control import (tariff_vector, EVEnvelope, safety_project, EV_ETA)
-from .controllers import (UncoordinatedController, MPCController, RulePolicy, Proposal)
+from .controllers import (UncoordinatedController, NoControlController, MPCController,
+                         RulePolicy, Proposal)
 from .grid import VLIM_LO, VLIM_HI
 from .flexibility import compute_envelope
 from .decision_trace import build_trace
@@ -58,9 +59,10 @@ def export_limit(grid, nb, v_target=1.055):
         if h.pv_kwp > 0:
             shape[(h.node, h.phase)] = shape.get((h.node, h.phase), 0.0) + h.pv_kwp / tot
     for j, c in enumerate(nb.commercials):
-        if c.pv_kwp > 0:
-            k0 = (c.node, (j % 3) + 1)
-            shape[k0] = shape.get(k0, 0.0) + c.pv_kwp / tot
+        if c.pv_kwp > 0:                      # three-phase inverter: one third per phase
+            for ph in (1, 2, 3):
+                k0 = (c.node, ph)
+                shape[k0] = shape.get(k0, 0.0) + c.pv_kwp / tot / 3.0
     lo, hi = 20.0, 900.0
     for _ in range(18):
         mid = (lo + hi) / 2
@@ -78,6 +80,8 @@ def _add(d, k, v):
 
 
 def make_controller(name, nb, forecast, grid, flex_homes, mpc_every=2, limits=None):
+    if name == 'no_control':
+        return NoControlController(nb, {h.id: defer_pref(h) for h in flex_homes})
     if name == 'uncoordinated':
         return UncoordinatedController(nb, {h.id: defer_pref(h) for h in flex_homes})
     if name == 'rule_tou':
@@ -91,7 +95,7 @@ def make_controller(name, nb, forecast, grid, flex_homes, mpc_every=2, limits=No
 def run_scenario(nb, grid, data, forecast, mode='coordinated', seed=0, mpc_every=2,
                  controller=None, plant=None, limits=None, safety_limits=None,
                  extra_overrides=None, on_step=None,
-                 want_envelope=False, want_trace=False):
+                 want_envelope=False, want_trace=False, net_cut=None, probe=None):
     """mode: 'uncoordinated' | 'rule_tou' | 'coordinated' (LP-MPC), or pass `controller`.
     plant : optional second grid that stands for REALITY (twin/plant mismatch).
             Safety verification still uses `grid` (the twin).
@@ -112,6 +116,10 @@ def run_scenario(nb, grid, data, forecast, mode='coordinated', seed=0, mpc_every
     ctrl = controller or make_controller(mode, nb, forecast, grid, flex_homes,
                                          mpc_every, limits)
     use_groups = ctrl.uses_safety_groups
+    if net_cut is not None:                 # DISCOM request: reduction of net import (kW) per absolute step k
+        if not hasattr(ctrl, 'net_cut'):
+            raise ValueError('net_cut needs the coordinated (MPC) controller')
+        ctrl.net_cut = np.asarray(net_cut, float)
     evalgrid = plant or grid
 
     # Envelope needs an import-headroom figure for EVERY controller type, not
@@ -122,6 +130,7 @@ def run_scenario(nb, grid, data, forecast, mode='coordinated', seed=0, mpc_every
     if want_envelope and env_P_head is None:
         env_P_head = limits[0] if limits else headroom(grid, nb)
     envelopes, traces = [], []
+    probe_out = None                       # read-only DISCOM capability probe (see discom.py)
 
     ev_soc = {e.id: 0.0 for e in nb.evs}
     ev_soc0 = dict(ev_soc)
@@ -146,7 +155,9 @@ def run_scenario(nb, grid, data, forecast, mode='coordinated', seed=0, mpc_every
     L = {k: [] for k in ('tx_loading', 'vmin', 'vmax', 'vviol', 'net', 'losses', 'cost', 'curt',
                          'curt_plan', 'curt_prot', 'ev_charge', 'batt', 'defer', 'interv',
                          'pv_avail', 'safety_scale', 'export', 'line_max', 'status_ok',
-                         'plant_tx', 'plant_vmin', 'plant_vmax', 'plant_ok', 'solve_ms')}
+                         'plant_tx', 'plant_vmin', 'plant_vmax', 'plant_ok', 'solve_ms',
+                         'flex_req', 'flex_del', 'batt_reserve_viol',
+                         'group_actions', 'phase_pct_max', 'imbalance', 'phase_a', 'phase_b', 'phase_c')}
     status_count = {'verified': 0, 'infeasible': 0, 'solver_failed': 0}
     violation_count = {}
     ledger = []                                     # auditable override ledger
@@ -215,6 +226,10 @@ def run_scenario(nb, grid, data, forecast, mode='coordinated', seed=0, mpc_every
                    net_now_kw=float(inflex[t] - pvagg[t]),
                    net_fc_now_kw=float(forecast['inflex']['p50'][k] - forecast['pv']['p50'][k]))
 
+        if probe is not None and k == probe['k'] and hasattr(ctrl, 'cut_capability'):
+            probe_out = [ctrl.cut_capability(obs, probe['start'] + sh, probe['n'])
+                         for sh in range(probe['max_shift'] + 1)]
+
         # ---- 3. proposal -------------------------------------------------
         t0 = time.perf_counter()
         prop: Proposal = ctrl.act(obs)
@@ -266,8 +281,9 @@ def run_scenario(nb, grid, data, forecast, mode='coordinated', seed=0, mpc_every
         for j, c in enumerate(nb.commercials):
             for off in range(3):
                 _add(base_inj, (c.node, (j + off) % 3 + 1), data['comm_load'][j, t] / 3.0)
-            if c.pv_kwp > 0:
-                _add(pv_i, (c.node, (j % 3) + 1), -data['pv_comm'][j, t])
+            if c.pv_kwp > 0:                  # three-phase inverter (matches the 3-phase load)
+                for ph in (1, 2, 3):
+                    _add(pv_i, (c.node, ph), -data['pv_comm'][j, t] / 3.0)
         pv_avail = float(-sum(pv_i.values()))
         plan_scale = 1.0
         if prop.curt_kw > 1e-6 and pv_avail > 1e-6:
@@ -355,7 +371,12 @@ def run_scenario(nb, grid, data, forecast, mode='coordinated', seed=0, mpc_every
         L['ev_charge'].append(sum(ev_act.values()))
         L['batt'].append(sum(bc_act.values()) - sum(bd_act.values()))
         L['defer'].append(sum(fl_act.values()))
-        L['interv'].append(res.n_interventions)
+        L['interv'].append(1.0 if res.n_interventions > 0 else 0.0)   # STEPS in which the plan was modified
+        L['group_actions'].append(res.n_interventions)
+        for _i, _n in enumerate(('phase_a', 'phase_b', 'phase_c')):
+            L[_n].append(pst['tx_phase_pct'][_i] if pst.get('finite') else float('nan'))
+        L['phase_pct_max'].append(max(pst['tx_phase_pct']) if pst.get('finite') else float('nan'))
+        L['imbalance'].append(pst['imbalance'] if pst.get('finite') else float('nan'))
         L['safety_scale'].append(min(sc.values()) if sc else 1.0)
         L['status_ok'].append(1.0 if res.status == 'verified' else 0.0)
         L['plant_tx'].append(pst['tx_loading']); L['plant_vmin'].append(pst['vmin'])
@@ -404,6 +425,8 @@ def run_scenario(nb, grid, data, forecast, mode='coordinated', seed=0, mpc_every
         m['envelopes'] = envelopes
     if want_trace:
         m['traces'] = traces
+    if probe is not None:
+        m['cut_capability'] = probe_out
     return m, A
 
 
@@ -448,7 +471,12 @@ def _metrics(ctrl, mode, L, nb, evs, ev_out, ev_soc, ev_soc0, ev_in, batt_e, bat
         ev_missed=[dict(ev=i, gap_kwh=round(r['gap_kwh'], 2), soc=round(r['soc_final'], 3),
                         req=round(r['req'], 3), override=r['override']) for i, r in ev_out.items() if not r['met']],
         override_ledger=ledger,
-        safety_interventions=int(A['interv'].sum()),
+        safety_interventions=int(A['interv'].sum()),          # steps in which the safety layer modified the plan
+        safety_group_actions=int(A['group_actions'].sum()),  # resource-group actions (finer-grained)
+        peak_phase_loading=float(np.nanmax(A['phase_pct_max'])),
+        hours_phase_over_100=float((A['phase_pct_max'] > 100).sum() * DT),
+        imbalance_p95=float(np.nanpercentile(A['imbalance'], 95)),
+        imbalance_max=float(np.nanmax(A['imbalance'])),
         constraint_status_steps=status_count,
         steps_verified_pct=100.0 * status_count['verified'] / max(1, sum(status_count.values())),
         violation_counts=violation_count,

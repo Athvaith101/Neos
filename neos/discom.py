@@ -1,140 +1,145 @@
 """
-discom.py -- DISCOM-facing emulation on the community hub (one day, 15-minute steps).
+discom.py -- DISCOM flexibility interface (master spec section 20).
 
-Shows, with real simulated values, the pieces the specification asks for:
-  * a Flexibility Envelope every step (reserve-protected, physics-bounded, expiring);
-  * remote commands with a TTL: an expired command is REJECTED, never run late;
-  * delivery MEASURED against a one-step counterfactual baseline (what the local
-    policy would have imported this step without the command);
-  * a hash-chain verification ledger, with offline records synchronised after the
-    link returns;
-  * communications loss: local scheduling and the protected reserve keep running.
+The utility asks for flexibility; NEOS answers ACCEPT / MODIFY / DEFER / REJECT
+from what it can actually deliver, never from what was asked for.
 
-THE NUMBERS ARE SIMULATED. No DISCOM, tariff or contract is represented; nothing here
-implies payment, settlement, trading or a utility's acceptance of any record.
+  request    : reduce net import by `kw` for `n_steps` control steps from
+               `start_step` (the evening-peak-relief case), notified `notice_steps`
+               before it begins.
+  capability : at the moment the request ARRIVES, the optimiser itself is asked
+               for the largest SUSTAINED cut it can deliver with zero unmet slack
+               (MPCController.cut_capability) for the requested window and for
+               windows up to 2 h later. This is state-, forecast-, EV-requirement-
+               and reserve-aware.
+
+FINDING that motivated this design (recorded in AUDIT-STATUS.md): the Flexibility
+Envelope reported ~99 kW of "safe flexibility" in an evening window in which the
+plan was already discharging every battery and charging no EV. Envelope flexibility
+is capacity to MOVE load; import can only be reduced by what is currently drawn or
+by extra discharge. So the envelope is shown on the console but is NOT used to
+decide a request.
+
+Delivery is MEASURED, not assumed: `emulate()` runs an unrequested baseline and a
+request run through the same controller, safety layer and AC power flow, and
+reports delivered = baseline net import - request net import per step, plus any
+rebound after the window. Settlement is explicitly NOT modelled: the spec lists
+baseline definition, metering, utility agreement and regulatory approval as later
+steps.
 """
 from __future__ import annotations
+from dataclasses import dataclass, asdict
 import numpy as np
-from . import hub
-from .ledger import VerificationLedger, Command
-from .envelope import battery_fleet_envelope, NOTICE
 
-DT = 0.25
+ACCEPT, MODIFY, DEFER, REJECT = 'ACCEPT', 'MODIFY', 'DEFER', 'REJECT'
+MIN_USEFUL_KW = 5.0           # below this a response is not worth dispatching
+MODIFY_FLOOR = 0.25           # accept a reduced amount if >= 25 % of what was asked
+MAX_DEFER_STEPS = 8           # look at most 2 h ahead for a better window
+SAFETY_MARGIN = 0.90          # promise 90 % of the probed capability (forecast error)
 
 
-def simulate(cfg=None, seed=3, day=200, requests=None, link_down=(15.0, 19.0), reserve_frac=0.50,
-             ttl_h=0.5):
-    """requests: list of dict(issue_h, kw, duration_h, direction). Default demonstrates a normal
-    request, a request sent during the comms outage (arrives expired), and a late request."""
-    cfg = cfg or hub.HubConfig()
-    tr = hub.make_traces(cfg, seed)
-    sl = slice(day * 96, day * 96 + 96)
-    D = tr['D'][sl].copy()
-    out = np.zeros(96, bool)                                        # grid assumed up on this day
-    cap = cfg.batt_kwh * cfg.soh
-    e = 0.80 * cap
-    ec, eb = cfg.eta_conv, cfg.eta_batt
-    requests = requests if requests is not None else [
-        dict(issue_h=16.5, kw=25.0, duration_h=1.5, direction='reduce_import'),   # sent while link is down
-        dict(issue_h=19.25, kw=20.0, duration_h=1.0, direction='reduce_import'),  # normal, after link returns
-        dict(issue_h=20.5, kw=30.0, duration_h=1.0, direction='reduce_import'),   # normal
-    ]
-    link = lambda h: not (link_down and link_down[0] <= h < link_down[1])
-    ledger = VerificationLedger(config_id=cfg.config_hash())
-    active = None
-    delivered_log = []
-    env_series = []
-    queued = sorted(requests, key=lambda r: r['issue_h'])
-    pending = []                                                    # remote side: awaiting a working link
-    imp_series, base_series, soc_series = [], [], []
-    hist_err = []
-    for t in range(96):
-        h = t * DT
-        online = link(h)
-        d = D[t] + cfg.aux_kw
-        # remote side issues commands; they can only ARRIVE while the link is up
-        while queued and queued[0]['issue_h'] <= h:
-            r = queued.pop(0)
-            pending.append(Command(request_id=f"R{len(ledger.records) + len(pending) + 1}", direction=r['direction'],
-                                   kw=r['kw'], duration_h=r['duration_h'], issued_at=r['issue_h'],
-                                   expires_at=r['issue_h'] + ttl_h, baseline_id='one-step-counterfactual'))
-        # forecast uncertainty from recent persistence error
-        hist_err.append(abs(D[t] - (D[t - 1] if t else D[t])))
-        sigma = float(np.mean(hist_err[-8:])) * 1.25
-        pending_now = list(pending) if online else []
-        # local policy (identical to battery_only peak shaving + recharge, protected reserve).
-        # The BASELINE is this full local policy: what would have been imported without any command.
-        P_local = 0.0
-        chg_local = 0.0
-        if d > cfg.shave_kw and e > reserve_frac * cap:
-            avail = (e - reserve_frac * cap) * ec * eb / DT
-            P_local = min(d - cfg.shave_kw, cfg.conv_kw, avail)
-        elif d < cfg.shave_kw and e < cfg.soc_max * cap:
-            room = (cfg.soc_max * cap - e) / (DT * ec * eb)
-            chg_local = min(cfg.shave_kw - d, cfg.conv_kw, room)
-        imp_base = d - P_local + chg_local
-        # envelope (post-reserve) at this step
-        env = battery_fleet_envelope(
-            [dict(e_kwh=e, cap_kwh=cap, soh=1.0, p_max_kw=cfg.conv_kw, eta=ec * eb, soc_min=cfg.soc_min,
-                  available=True)], reserve_frac, h, ttl_h=ttl_h, duration_h=1.0, sigma_kw=sigma,
-            stress_kw=max(0.0, d - cfg.shave_kw), config_id=cfg.config_hash())
-        env_series.append(dict(t=h, discharge_kw=env['discharge']['kw'], confidence=env['discharge']['confidence'],
-                               expires=env['expires_at_h'], online=online))
-        for cmd in pending_now:
-            ok, rec = ledger.receive(cmd, h, online=True)
-            pending.remove(cmd)
-            if not ok:
-                continue
-            if env['discharge']['kw'] < 0.5 * cmd.kw:             # cannot honour it: decline up front
-                ledger.decline(cmd, h, env['discharge']['kw'], online=True)
-                continue
-            active = dict(cmd=cmd, end=h + cmd.duration_h, deliv=[], base=[])
-        # active command: extra discharge on top of local policy, bounded by the envelope
-        P_cmd = 0.0
-        if active and h < active['end']:
-            want = min(active['cmd'].kw, max(0.0, imp_base))
-            room = max(0.0, env['discharge']['kw'])
-            e_left = max(0.0, e - reserve_frac * cap)               # never touch the protected reserve
-            P_cmd = min(want + chg_local, room + chg_local, e_left * ec * eb / DT + chg_local)
-            P_cmd = max(0.0, P_cmd)
-        if P_cmd > 0:                                               # a command cancels local recharging
-            chg = 0.0
-            P = P_local + P_cmd - chg_local if chg_local > 0 else P_local + P_cmd
-            P = max(P, 0.0)
-            e -= (P / ec / eb) * DT
-            imp = d - P
-        else:
-            if P_local > 0:
-                e -= (P_local / ec / eb) * DT
-            if chg_local > 0:
-                e += chg_local * ec * eb * DT
-            imp = imp_base
-        imp_series.append(imp); base_series.append(imp_base); soc_series.append(e / cap)
-        if active and h < active['end']:
-            active['deliv'].append(imp_base - imp)
-        if active and (h + DT >= active['end'] or t == 95):
-            kw_mean = max(0.0, float(np.mean(active['deliv']))) if active['deliv'] else 0.0
-            ledger.settle(active['cmd'], h + DT, kw_mean, len(active['deliv']) * DT, online=online,
-                          note='delivery measured vs one-step counterfactual baseline')
-            delivered_log.append((active['cmd'].request_id, kw_mean))
-            active = None
-        if not online:
-            # local decision log is kept offline; written as an offline record on the next sync
-            pass
-    # commands that never arrived before the day ended
-    for cmd in pending:
-        ledger.receive(cmd, 24.0, online=True)
-    # offline records: the settle() calls above happen with online flag at the time
-    pend_before = len(ledger.outbox)
-    synced = ledger.sync()
-    ok, bad = ledger.verify()
-    return dict(
-        notice=NOTICE, config_id=cfg.config_hash(), seed=seed, day=day, link_down=link_down, ttl_h=ttl_h,
-        reserve_protected_frac=reserve_frac,
-        envelope=env_series, import_kw=imp_series, baseline_import_kw=base_series, soc=soc_series,
-        ledger=ledger.records, ledger_summary=ledger.summary(), chain_ok=ok, offline_records_synced=synced,
-        min_soc=float(min(soc_series)), reserve_floor_respected=bool(min(soc_series) >= reserve_frac - 0.02),
-        local_policy_ran_while_offline=bool(any(not s['online'] for s in env_series)),
-        csv=ledger.to_csv(),
-        disclaimer='SIMULATED. Delivery is measured against a stated baseline; no payment, trading, tariff or '
-                   'contract is represented, and nothing here is a settlement record.')
+@dataclass
+class DiscomRequest:
+    start_step: int           # control step (0..95) the response must begin
+    n_steps: int              # duration in control steps (15 min each)
+    kw: float                 # requested reduction of net import, kW
+    notice_steps: int = 8     # how long before start_step the request arrives (default 2 h)
+    direction: str = 'reduce_import'
+    id: str = 'req-1'
+
+    @property
+    def arrival_step(self):
+        return max(0, self.start_step - self.notice_steps)
+
+
+@dataclass
+class Decision:
+    action: str
+    requested_kw: float
+    accepted_kw: float
+    start_step: int           # may differ from the request when DEFER
+    n_steps: int
+    probed_capability_kw: float   # optimiser-probed sustained cut for the decided window
+    reason: str
+
+    def to_dict(self):
+        return asdict(self)
+
+
+def decide(req: DiscomRequest, capability):
+    """capability[s] = probed sustained cut (kW) for a window starting s steps after
+    the requested start (None if beyond the horizon). Index 0 = requested window."""
+    def rej(msg, cap0=0.0):
+        return Decision(REJECT, req.kw, 0.0, req.start_step, req.n_steps, cap0, msg)
+    if req.direction != 'reduce_import':
+        return rej(f"direction '{req.direction}' is not supported by this interface")
+    if req.kw <= 0 or req.n_steps <= 0 or not capability or capability[0] is None:
+        return rej('request is empty, malformed or outside the planning horizon')
+    c0 = float(capability[0]) * SAFETY_MARGIN
+    if c0 >= req.kw:
+        return Decision(ACCEPT, req.kw, req.kw, req.start_step, req.n_steps, float(capability[0]),
+                        f'The optimiser can sustain {capability[0]:.0f} kW over the window; '
+                        f'{req.kw:.0f} kW is within the {100 * SAFETY_MARGIN:.0f}% of that NEOS is willing to promise.')
+    if c0 >= max(MIN_USEFUL_KW, MODIFY_FLOOR * req.kw):
+        amt = float(np.floor(c0))
+        return Decision(MODIFY, req.kw, amt, req.start_step, req.n_steps, float(capability[0]),
+                        f'Only {amt:.0f} kW can be sustained over the requested window '
+                        f'(probed capability {capability[0]:.0f} kW, {100 * SAFETY_MARGIN:.0f}% promised).')
+    for sh in range(1, min(len(capability), MAX_DEFER_STEPS + 1)):
+        cs = capability[sh]
+        if cs is not None and cs * SAFETY_MARGIN >= req.kw:
+            return Decision(DEFER, req.kw, req.kw, req.start_step + sh, req.n_steps, float(cs),
+                            f'Not enough at the requested time ({capability[0]:.0f} kW probed); '
+                            f'{req.kw:.0f} kW is deliverable {sh * 15} min later.')
+    return rej(f'Probed sustained capability is {capability[0]:.0f} kW; nothing useful can be '
+               f'promised without breaching a constraint, an EV requirement or the battery reserve.',
+               float(capability[0]))
+
+
+def emulate(run_fn, req: DiscomRequest):
+    """Baseline run (+ read-only capability probe at the request's arrival) ->
+    decision -> request run -> MEASURED delivery.
+
+    run_fn(net_cut=None, probe=None) -> (metrics, series); series['net'] is the
+    transformer net import (kW) per step.
+    """
+    probe = dict(k=req.arrival_step, start=req.start_step, n=req.n_steps, max_shift=MAX_DEFER_STEPS)
+    base_m, base_s = run_fn(None, probe)
+    net0 = np.asarray(base_s['net'], float)
+    dec = decide(req, base_m.get('cut_capability'))
+    out = dict(request=asdict(req), decision=dec.to_dict(), baseline=_summ(base_m, net0),
+               capability_by_shift_kw=base_m.get('cut_capability'))
+    if dec.action == REJECT or dec.accepted_kw <= 0:
+        out.update(delivered=None, actual=out['baseline'], window=None,
+                   note='Request rejected: the actual run equals the baseline by construction.')
+        return out
+    a, b = dec.start_step, dec.start_step + dec.n_steps
+    cut = np.zeros(len(net0))
+    cut[a:b] = dec.accepted_kw                         # the promised reduction, vs the unrequested plan
+    act_m, act_s = run_fn(cut, None)
+    net1 = np.asarray(act_s['net'], float)
+    delivered = net0[a:b] - net1[a:b]
+    post = slice(b, min(b + MAX_DEFER_STEPS, len(net0)))     # the 2 h after the window
+    rebound_kw = float(np.max(net1[post]) - np.max(net0[post])) if len(net0[post]) else 0.0
+    out.update(
+        actual=_summ(act_m, net1),
+        delivered=dict(mean_kw=float(np.mean(delivered)), min_kw=float(np.min(delivered)),
+                       per_step_kw=[float(x) for x in delivered],
+                       delivery_ratio=float(np.mean(delivered) / dec.accepted_kw),
+                       steps_meeting_promise=int(np.sum(delivered >= 0.9 * dec.accepted_kw)),
+                       n_steps=int(b - a),
+                       shortfall_kwh=float(np.sum(np.maximum(dec.accepted_kw - delivered, 0.0)) * 0.25),
+                       energy_shifted_kwh=float(np.sum(delivered) * 0.25)),
+        net_baseline_kw=[float(x) for x in net0], net_actual_kw=[float(x) for x in net1],
+        window=[int(a), int(b)],
+        rebound=dict(post_window_peak_change_kw=rebound_kw,
+                     overall_peak_change_kw=float(np.max(net1) - np.max(net0))))
+    return out
+
+
+def _summ(m, net):
+    return dict(peak_kw=float(np.max(net)), peak_tx_loading=m['peak_tx_loading'],
+                peak_phase_loading=m['peak_phase_loading'], min_voltage=m['min_voltage'],
+                ev_satisfaction=m['ev_satisfaction'], ev_unserved_kwh=m['ev_unserved_kwh'],
+                energy_cost_inr=m['energy_cost_inr'], steps_verified_pct=m['steps_verified_pct'],
+                safety_interventions=m['safety_interventions'])
