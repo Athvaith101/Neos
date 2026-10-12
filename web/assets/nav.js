@@ -30,7 +30,7 @@ const NEOS_NAV = {
         <div class="neos-nav-in">
           <div style="display:flex;align-items:center;gap:4px">
             <div class="neos-links">${links}</div>
-            <div class="neos-status"><span class="dot"></span><span id="neos-backend-label">checking backend…</span></div>
+            <div class="neos-status" data-state="pending" aria-live="polite"><span class="dot"></span><span id="neos-backend-label">page ready · connecting</span></div>
           </div>
           <${standalone ? 'span' : 'a href="./index.html"'} class="neos-brand" style="text-decoration:none">
             <span class="word">NEOS</span>${NEOS_LOGO}
@@ -39,13 +39,28 @@ const NEOS_NAV = {
       </nav>`;
     const root = document.getElementById('neos-nav-root');
     if (root) root.outerHTML = html;
-    fetch('/api/meta').then(r => r.json()).then(d => {
-      const el = document.getElementById('neos-backend-label');
-      if (el) el.textContent = `${d.grid_backend} · ${d.homes} homes`;
-    }).catch(() => {
-      const el = document.getElementById('neos-backend-label');
-      if (el) el.textContent = 'backend unreachable';
-    });
+    if (!standalone) {
+      const checkBackend = async () => {
+        const status = document.querySelector('.neos-status');
+        const label = document.getElementById('neos-backend-label');
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+        try {
+          const response = await fetch('/api/health', { signal: controller.signal });
+          if (!response.ok) throw new Error('Backend health check failed');
+          await response.json();
+          if (status) status.dataset.state = 'ready';
+          if (label) label.textContent = 'backend ready';
+        } catch (_) {
+          if (status) status.dataset.state = 'pending';
+          if (label) label.textContent = 'page ready · backend starting';
+          setTimeout(checkBackend, 15000);
+        } finally {
+          clearTimeout(timeout);
+        }
+      };
+      checkBackend();
+    }
   },
   renderFoot(){
     const html = `
