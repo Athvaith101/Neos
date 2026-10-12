@@ -32,6 +32,7 @@ Endpoints
 """
 from __future__ import annotations
 import asyncio, json, os, pathlib, queue, threading
+from functools import lru_cache
 _DISCOM_LOCK = threading.Lock()
 from pathlib import Path
 
@@ -85,6 +86,42 @@ def check(scenario, mode=None):
         raise HTTPException(400, detail=f"mode must be one of {MODES}")
 
 
+@lru_cache(maxsize=8)
+def _cached_page_run(scenario, mode, rep, n_homes, n_ev, n_pv, n_bess, tx_kva, backend):
+    """Share deterministic simulation output across the read-only analysis pages."""
+    cfg = cfg_from(n_homes, n_ev, n_pv, n_bess, tx_kva, backend)
+    return service.run(cfg, scenario, mode, rep=rep, use_ledger=False,
+                       want_envelope=True, want_trace=True)
+
+
+def _page_run(scenario, mode, rep, n_homes, n_ev, n_pv, n_bess, tx_kva, backend):
+    cfg = cfg_from(n_homes, n_ev, n_pv, n_bess, tx_kva, backend)
+    # A queued user override must be applied by a fresh run, never hidden by a cache hit.
+    if service.LEDGER.pending(scenario, rep, cfg):
+        _cached_page_run.cache_clear()
+        return service.run(cfg, scenario, mode, rep=rep, want_envelope=True, want_trace=True)
+    return _cached_page_run(scenario, mode, rep, n_homes, n_ev, n_pv, n_bess, tx_kva, backend)
+
+@lru_cache(maxsize=8)
+def _cached_discom(scenario, start_step, n_steps, kw, notice_steps, rep,
+                   n_homes, n_ev, n_pv, n_bess, tx_kva, backend, margin):
+    """Cache identical DISCOM studies; each study contains two complete simulations."""
+    cfg = cfg_from(n_homes, n_ev, n_pv, n_bess, tx_kva, backend)
+
+    def run_fn(cut=None, probe=None):
+        m, series, _ = service.run(cfg, scenario, "coordinated", rep=rep, want_envelope=True,
+                                   net_cut=cut, probe=probe, use_ledger=False)
+        return m, series
+
+    with _DISCOM_LOCK:
+        previous_margin = discom.SAFETY_MARGIN
+        discom.SAFETY_MARGIN = margin
+        try:
+            return discom.emulate(run_fn, discom.DiscomRequest(start_step, n_steps, kw, notice_steps))
+        finally:
+            discom.SAFETY_MARGIN = previous_margin
+
+
 @app.get("/api/health")
 def health():
     return dict(status="ok", simulation_only=True, auth_required=bool(os.environ.get("NEOS_API_KEY")),
@@ -118,7 +155,7 @@ def phase(scenario: str = "normal", mode: str = "coordinated", rep: int = 0,
     Phase totals only -- aggregate measurements cannot attribute load to a device."""
     check(scenario, mode)
     cfg = cfg_from(n_homes, n_ev, n_pv, n_bess, tx_kva, backend)
-    m, s, _ = service.run(cfg, scenario, mode, rep=rep, use_ledger=False)
+    m, s, _ = _page_run(scenario, mode, rep, n_homes, n_ev, n_pv, n_bess, tx_kva, backend)
     return dict(scenario=scenario, mode=mode, tx_loading=s["tx_loading"],
                 phases=dict(A=s["phase_a"], B=s["phase_b"], C=s["phase_c"]),
                 imbalance=s["imbalance"], peak_phase_loading=m["peak_phase_loading"],
@@ -136,18 +173,11 @@ def discom_request(scenario: str = "normal", start_step: int = Query(44, ge=0, l
     from an optimiser probe, then the response is MEASURED against an unrequested baseline run.
     Simulation only; no settlement is modelled. Takes tens of seconds on OpenDSS."""
     check(scenario)
-    cfg = cfg_from(n_homes, n_ev, n_pv, n_bess, tx_kva, backend)
     margin = 1.0
     if PLATFORM.exists():
         margin = json.loads(PLATFORM.read_text())["discom"]["margin"]
-
-    def run_fn(cut=None, probe=None):
-        m, s, _ = service.run(cfg, scenario, "coordinated", rep=rep, want_envelope=True, net_cut=cut,
-                              probe=probe, use_ledger=False)
-        return m, s
-    with _DISCOM_LOCK:
-        discom.SAFETY_MARGIN = margin
-        out = discom.emulate(run_fn, discom.DiscomRequest(start_step, n_steps, kw, notice_steps))
+    out = dict(_cached_discom(scenario, start_step, n_steps, kw, notice_steps, rep,
+                              n_homes, n_ev, n_pv, n_bess, tx_kva, backend, margin))
     out["margin_used"] = margin
     rel = None
     if PLATFORM.exists():
@@ -169,6 +199,13 @@ def _village_q(homes, pv_kwp, battery_kwh, battery_kw):
         return rural.validate_village(homes=homes, pv_kwp=pv_kwp, battery_kwh=battery_kwh, battery_kw=battery_kw)
     except ValueError as e:
         raise HTTPException(400, detail=str(e))
+
+
+@lru_cache(maxsize=16)
+def _cached_rural_arm(scenario, arm, seed, backend, endurance_h, homes, pv_kwp, battery_kwh, battery_kw):
+    """Rural runs are deterministic; reuse each arm when users revisit the same setup."""
+    with rural.village(homes=homes, pv_kwp=pv_kwp, battery_kwh=battery_kwh, battery_kw=battery_kw):
+        return rural.run_rural(scenario, arm, seed=seed, backend=backend, t1_endurance_h=endurance_h)
 
 
 @app.get("/api/rural")
@@ -193,10 +230,10 @@ def rural_compare(scenario: str = "cloudy_outage", seed: int = Query(0, ge=0, le
         raise HTTPException(400, detail=f"unknown rural scenario '{scenario}'")
     v = _village_q(homes, pv_kwp, battery_kwh, battery_kw)
     out = {}
-    with rural.village(**v):
-        for a in ("naive", "neos"):
-            out[a] = dict(zip(("metrics", "series"), rural.run_rural(scenario, a, seed=seed, backend=backend,
-                                                                      t1_endurance_h=t1_endurance_h)))
+    for a in ("naive", "neos"):
+        metrics, series = _cached_rural_arm(scenario, a, seed, backend, t1_endurance_h,
+                                             v["homes"], v["pv_kwp"], v["battery_kwh"], v["battery_kw"])
+        out[a] = dict(metrics=metrics, series=series)
     return dict(scenario=scenario, title=rural.SCENARIOS[scenario]["title"], tiers=rural.TIER_NAMES,
                 village=v, is_default_village=(v == rural.DEFAULT_VILLAGE),
                 village_bounds=rural.VILLAGE_BOUNDS, **out)
@@ -402,7 +439,7 @@ def flexibility(scenario: str = "normal", mode: str = "coordinated", rep: int = 
     dashboard widget would actually poll."""
     check(scenario, mode)
     cfg = cfg_from(n_homes, n_ev, n_pv, n_bess, tx_kva, backend)
-    m, _series, _fc = service.run(cfg, scenario, mode, rep=rep, want_envelope=True)
+    m, _series, _fc = _page_run(scenario, mode, rep, n_homes, n_ev, n_pv, n_bess, tx_kva, backend)
     envs = m.get('envelopes', [])
     return dict(scenario=scenario, mode=mode, envelopes=envs,
                latest=envs[-1] if envs else None)
@@ -420,7 +457,7 @@ def decision_trace(scenario: str = "normal", mode: str = "coordinated", rep: int
     plan existed."""
     check(scenario, mode)
     cfg = cfg_from(n_homes, n_ev, n_pv, n_bess, tx_kva, backend)
-    m, _series, _fc = service.run(cfg, scenario, mode, rep=rep, want_trace=True)
+    m, _series, _fc = _page_run(scenario, mode, rep, n_homes, n_ev, n_pv, n_bess, tx_kva, backend)
     traces = m.get('traces', [])
     if status is not None:
         want = status.upper()
@@ -458,6 +495,7 @@ def override(ev_id: int, kind: str = "need_now", scenario: str = "normal", rep: 
         raise HTTPException(422, detail=f"ev_id must be in [0, {n_ev})")
     try:
         e = service.LEDGER.submit(scenario, ev_id, kind, lead_steps, notice_step, rep=rep, cfg=cfg)
+        _cached_page_run.cache_clear()
     except ValueError as ex:
         raise HTTPException(422, detail=str(ex))
     return dict(id=e['id'], status=e['status'], applied=False, simulation_only=True,
