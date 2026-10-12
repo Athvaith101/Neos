@@ -135,21 +135,27 @@ fetch('/api/platform/evidence').then(r => r.json()).then(d => {
   L.insertAdjacentHTML('beforeend','<ul style="padding-left:18px;margin:8px 0 0">'+(d.limitations||[]).map(l=>`<li style="margin-bottom:8px">${l}</li>`).join('')+'</ul>');
 }).catch(()=>{document.getElementById('platform').innerHTML='<p class="loading">results_platform.json not reachable.</p>';});
 
-fetch('/api/evidence').then(r => r.json()).then(d => {
+// The platform evidence endpoint includes its own limitations and provenance.
+ // Avoid requesting /api/evidence here: results.json is not valid in the deployed
+ // bundle, and the endpoint currently errors while parsing it.
+fetch('/api/platform/evidence').then(r => {
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}).then(d => {
   const lim = d.limitations || [];
   document.getElementById('limitations').innerHTML = lim.length
     ? '<ul style="padding-left:18px;margin:0">' + lim.map(l => `<li style="margin-bottom:8px">${l}</li>`).join('') + '</ul>'
-    : '<p class="loading">No limitations list in results.json.</p>';
+    : '<p class="loading">No limitations were recorded for these platform studies.</p>';
 
   const p = d.provenance || {};
   const rows = Object.entries(p).map(([k,v]) =>
     `<tr><th>${k}</th><td>${typeof v === 'object' ? JSON.stringify(v) : v}</td></tr>`).join('');
   document.getElementById('provenance').innerHTML = rows
     ? `<table class="data">${rows}</table>`
-    : '<p class="loading">No provenance recorded in results.json.</p>';
+    : '<p class="loading">No provenance was recorded for these platform studies.</p>';
 }).catch(() => {
-  document.getElementById('limitations').innerHTML = '<p class="loading">results.json not reachable — run <code>python experiments.py</code> first.</p>';
-  document.getElementById('provenance').innerHTML = '';
+  document.getElementById('limitations').innerHTML = '<p class="loading">Study limitations are temporarily unavailable.</p>';
+  document.getElementById('provenance').innerHTML = '<p class="loading">Study provenance is temporarily unavailable.</p>';
 });
 </script>
 </body>
