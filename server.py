@@ -229,6 +229,25 @@ def rural_compare(scenario: str = "cloudy_outage", seed: int = Query(0, ge=0, le
     if scenario not in rural.SCENARIOS:
         raise HTTPException(400, detail=f"unknown rural scenario '{scenario}'")
     v = _village_q(homes, pv_kwp, battery_kwh, battery_kw)
+
+    # The default screen exactly matches this archived, OpenDSS-verified example.
+    # Reuse its full metrics and time series so the first visit does not wait for
+    # two fresh OpenDSS runs on a cold Render instance.
+    default_example = (
+        scenario == "cloudy_outage" and seed == 0 and backend == "auto"
+        and t1_endurance_h == rural.T1_ENDURANCE_H and v == rural.DEFAULT_VILLAGE
+    )
+    if default_example and PLATFORM.exists():
+        try:
+            example = json.loads(PLATFORM.read_text()).get("rural", {}).get("example", {})
+            if example.get("scenario") == scenario and "naive" in example and "neos" in example:
+                return dict(scenario=scenario, title=rural.SCENARIOS[scenario]["title"],
+                            tiers=rural.TIER_NAMES, village=v, is_default_village=True,
+                            village_bounds=rural.VILLAGE_BOUNDS,
+                            naive=example["naive"], neos=example["neos"])
+        except (OSError, json.JSONDecodeError, TypeError):
+            pass
+
     out = {}
     for a in ("naive", "neos"):
         metrics, series = _cached_rural_arm(scenario, a, seed, backend, t1_endurance_h,
@@ -237,7 +256,6 @@ def rural_compare(scenario: str = "cloudy_outage", seed: int = Query(0, ge=0, le
     return dict(scenario=scenario, title=rural.SCENARIOS[scenario]["title"], tiers=rural.TIER_NAMES,
                 village=v, is_default_village=(v == rural.DEFAULT_VILLAGE),
                 village_bounds=rural.VILLAGE_BOUNDS, **out)
-
 
 import re as _re, tempfile as _tmp
 _HUBS: dict = {}
