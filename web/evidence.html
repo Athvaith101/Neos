@@ -42,7 +42,7 @@ section.block h2{ font-size:22px; margin-bottom:16px; }
 <section class="block">
   <div class="wrap">
     <div class="fact-grid">
-      <div class="fact"><span>Automated tests passing</span><b id="f-tests">…</b></div>
+      <div class="fact"><span>Automated test status</span><b id="f-tests">…</b></div>
       <div class="fact"><span>Grid solver backend in use</span><b id="f-backend">…</b></div>
       <div class="fact"><span>Cross-backend checks (reference vs OpenDSS)</span><b>validate_platform.py</b></div>
       <div class="fact"><span>DISCOM promises kept, held-out</span><b id="f-kept">…</b></div>
@@ -105,16 +105,16 @@ section.block h2{ font-size:22px; margin-bottom:16px; }
 <script>
 NEOS_NAV.render('evidence'); NEOS_NAV.renderFoot();
 
-fetch('/api/meta').then(r => r.json()).then(d => {
-  document.getElementById('f-backend').textContent = d.grid_backend;
-  const t = d.test_status; document.getElementById('f-tests').textContent = t ? `${t.passed} / ${t.total}` : 'not recorded (run run_tests.py)';
-}).catch(() => { document.getElementById('f-backend').textContent = '—'; });
+// The hosted bundle does not publish the automated test runner status.
+document.getElementById('f-tests').textContent = 'not reported';
 
 fetch('/api/platform/evidence').then(r => r.json()).then(d => {
   const f = (x,n=2) => (x==null||isNaN(x)) ? '—' : Number(x).toFixed(n);
   const S = d.discom.summary, rows = [];
   document.getElementById('f-kept').textContent = S.promise_kept + ' / ' + S.n_requests;
   const ho = d.rural.held_out;
+  const solver = Object.values(ho).map(v => v.backend).find(Boolean);
+  document.getElementById('f-backend').textContent = solver || '—';
   for (const [k,v] of Object.entries(ho)) {
     rows.push(`<tr><td>${v.title||k}</td><td>${f(v.clinic_unserved_kwh.naive.mean)} → ${f(v.clinic_unserved_kwh.neos.mean)}</td>`+
       `<td>${f(v.tier2_unserved_kwh.naive.mean)} → ${f(v.tier2_unserved_kwh.neos.mean)}</td>`+
